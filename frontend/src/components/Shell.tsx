@@ -1,63 +1,123 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { OrgDialog } from "./dialogs";
+import { avatarClass, IconHome, IconMeetMark, IconPlus, IconVideo, initials } from "./Icons";
 import { api } from "@/lib/api";
-import { avatarClass, IconMeetMark, IconVideo, initials } from "./Icons";
 import type { OrgSummary, User } from "@/lib/types";
 
-interface Props {
-  user: User | null;
-  onLogout: () => void;
-  /** Pass the list when the page already has it; otherwise the shell loads it. */
-  orgs?: OrgSummary[];
-  children: React.ReactNode;
+function crumbs(path: string, orgs: OrgSummary[]): { label: string; href?: string }[] {
+  const home = { label: "Trang chủ", href: "/" };
+  if (path === "/") return [{ label: "Trang chủ" }];
+  if (path === "/meetings") return [home, { label: "Phiên họp" }];
+  const org = path.match(/^\/orgs\/([^/]+)/);
+  if (org) return [home, { label: orgs.find((o) => o.id === org[1])?.name ?? "Tổ chức" }];
+  if (path.includes("/minutes")) return [home, { label: "Phiên họp", href: "/meetings" }, { label: "Biên bản" }];
+  return [home];
 }
 
-/** Sidebar + full-width content: the frame of every page except the meeting room. */
-export function Shell({ user, onLogout, orgs, children }: Props) {
+/** Sidebar + header layout (same pattern as ZenClass) around a full-width page. Used by every page except the meeting room. */
+export function Shell({ user, onLogout, children }: { user: User | null; onLogout: () => void; children: React.ReactNode }) {
   const path = usePathname();
-  const [loaded, setLoaded] = useState<OrgSummary[]>([]);
+  const router = useRouter();
+  const [orgs, setOrgs] = useState<OrgSummary[]>([]);
+  const [menu, setMenu] = useState(false);
+  const [drawer, setDrawer] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const head = useRef<HTMLElement>(null);
+
+  const reload = useCallback(() => api.listOrgs().then(setOrgs).catch(() => {}), []);
+  useEffect(() => {
+    if (user) reload();
+  }, [user, reload, path]);
 
   useEffect(() => {
-    if (user && !orgs) api.listOrgs().then(setLoaded).catch(() => {});
-  }, [user, orgs]);
-  const list = orgs ?? loaded;
+    const close = (e: MouseEvent) => head.current && !head.current.contains(e.target as Node) && setMenu(false);
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setMenu(false);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", esc);
+    };
+  }, []);
+  useEffect(() => {
+    setMenu(false);
+    setDrawer(false);
+  }, [path]);
+
+  const trail = crumbs(path, orgs);
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <Link href="/" className="brand">
+    <div className="zshell">
+      <aside className={`sidebar ${drawer ? "open" : ""}`} aria-label="Điều hướng chính">
+        <Link href="/" className="sb-brand">
           <IconMeetMark />
-          MeetMind
+          <span>
+            <b>MeetMind</b>
+            <small>Trợ lý họp AI</small>
+          </span>
         </Link>
-        <nav className="col" style={{ gap: 2 }}>
-          <Link href="/" className={`nav-item ${path === "/" ? "active" : ""}`}>
-            <IconVideo />
-            Phiên họp
-          </Link>
-          {list.length > 0 && <div className="nav-label">Tổ chức</div>}
-          {list.map((o) => (
-            <Link key={o.id} href={`/orgs/${o.id}`} className={`nav-item ${path === `/orgs/${o.id}` ? "active" : ""}`}>
+        <nav className="sb-nav">
+          <Link href="/" className={`sb-item ${path === "/" ? "active" : ""}`}><IconHome />Trang chủ</Link>
+          <div className="sb-group">Làm việc</div>
+          <Link href="/meetings" className={`sb-item ${path === "/meetings" ? "active" : ""}`}><IconVideo />Phiên họp</Link>
+          <div className="sb-group">Tổ chức</div>
+          {orgs.length === 0 && <div className="sb-empty">Chưa thuộc tổ chức nào</div>}
+          {orgs.map((o) => (
+            <Link key={o.id} href={`/orgs/${o.id}`} className={`sb-item ${path.startsWith(`/orgs/${o.id}`) ? "active" : ""}`}>
               <span className={`avatar sm ${avatarClass(o.name)}`}>{initials(o.name)}</span>
               <span className="truncate">{o.name}</span>
             </Link>
           ))}
+          <button className="sb-item sb-add" onClick={() => setAdding(true)}>
+            <IconPlus />Thêm tổ chức
+          </button>
         </nav>
-        <div className="grow" />
-        {user && (
-          <div className="side-user">
-            <span className="avatar on-dark">{initials(user.name)}</span>
-            <div className="grow">
-              <div className="truncate" style={{ fontWeight: 700 }}>{user.name}</div>
-              <div className="truncate small" style={{ color: "#9a93bf" }}>{user.email}</div>
-            </div>
-            <button className="btn sm on-dark" onClick={onLogout} title="Đăng xuất">Thoát</button>
-          </div>
-        )}
+        {user && <div className="sb-foot">{user.name} · {user.email}</div>}
       </aside>
-      <main className="content">{children}</main>
+      {drawer && <div className="sb-scrim" onClick={() => setDrawer(false)} />}
+
+      <div className="zmain">
+        <header className="zhead" ref={head}>
+          <button className="sb-toggle btn icon-only ghost" aria-label="Mở menu" onClick={() => setDrawer(true)}>☰</button>
+          <nav className="crumbs" aria-label="Vị trí">
+            {trail.map((c, i) => (
+              <span key={i} className="crumb">
+                {i > 0 && <span aria-hidden>›</span>}
+                {c.href ? <Link href={c.href}>{c.label}</Link> : <span className="here">{c.label}</span>}
+              </span>
+            ))}
+          </nav>
+          <div className="grow" />
+          {user && (
+            <div className="menu-wrap">
+              <button className="who" aria-expanded={menu} onClick={() => setMenu(!menu)}>
+                <span className="avatar sm av-0">{initials(user.name)}</span>
+                <span className="who-text">
+                  <b className="truncate">{user.name}</b>
+                  <small>{user.email}</small>
+                </span>
+              </button>
+              {menu && (
+                <div className="menu right" role="menu">
+                  <div className="menu-label">Tài khoản</div>
+                  <div style={{ padding: "4px 14px 10px" }}>
+                    <div style={{ fontWeight: 700 }}>{user.name}</div>
+                    <div className="muted small">{user.email}</div>
+                  </div>
+                  <button className="menu-item" role="menuitem" onClick={onLogout}>Đăng xuất</button>
+                </div>
+              )}
+            </div>
+          )}
+        </header>
+        <main className="content">{children}</main>
+      </div>
+
+      {adding && <OrgDialog onClose={() => setAdding(false)} onDone={(o) => { setAdding(false); reload(); router.push(`/orgs/${o.id}`); }} />}
     </div>
   );
 }

@@ -76,6 +76,7 @@ export const api = {
 
   listOrgs: () => json<OrgSummary[]>("/api/orgs"),
   createOrg: (name: string) => json<OrgSummary>("/api/orgs", { method: "POST", ...body({ name }) }),
+  renameOrg: (id: string, name: string) => json<{ id: string; name: string }>(`/api/orgs/${id}`, { method: "PATCH", ...body({ name }) }),
   getOrg: (id: string) => json<OrgDetail>(`/api/orgs/${id}`),
   inviteToOrg: (id: string, emails: string[], role: string) =>
     json<InviteResult>(`/api/orgs/${id}/invitations`, { method: "POST", ...body({ emails, role }) }),

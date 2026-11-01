@@ -20,6 +20,10 @@ class InviteBody(BaseModel):
     role: str = "member"
 
 
+class RenameBody(BaseModel):
+    name: str = Field(max_length=120)
+
+
 class RoleBody(BaseModel):
     role: str
 
@@ -35,13 +39,16 @@ def invite_view(result: InviteResult) -> dict:
 
 @router.get("")
 async def list_orgs(user: User = Depends(current_user), c: Container = Depends(get_container)) -> list[dict]:
-    return [{"id": o.id, "name": o.name, "role": role} for o, role in await c.orgs.list_for_user(user.id)]
+    return [
+        {"id": o.id, "name": o.name, "role": role, "created_at": o.created_at, "member_count": await c.orgs.member_count(o.id)}
+        for o, role in await c.orgs.list_for_user(user.id)
+    ]
 
 
 @router.post("")
 async def create_org(body: CreateOrg, user: User = Depends(current_user), c: Container = Depends(get_container)) -> dict:
     org = await c.orgs.create(user.id, body.name)
-    return {"id": org.id, "name": org.name, "role": "owner"}
+    return {"id": org.id, "name": org.name, "role": "owner", "created_at": org.created_at, "member_count": 1}
 
 
 @router.get("/{org_id}")
@@ -53,12 +60,19 @@ async def get_org(org_id: str, user: User = Depends(current_user), c: Container 
         "id": org.id,
         "name": org.name,
         "role": me.role,
+        "created_at": org.created_at,
         "members": [
             {"user_id": m.user_id, "name": m.name, "email": m.email, "role": m.role}
             for m in await c.orgs.members(org_id, user.id)
         ],
         "pending": [{"id": i.id, "email": i.email, "role": i.role, "created_at": i.created_at} for i in pending],
     }
+
+
+@router.patch("/{org_id}")
+async def rename_org(org_id: str, body: RenameBody, user: User = Depends(current_user), c: Container = Depends(get_container)) -> dict:
+    org = await c.orgs.rename(org_id, user.id, body.name)
+    return {"id": org.id, "name": org.name}
 
 
 @router.post("/{org_id}/invitations")

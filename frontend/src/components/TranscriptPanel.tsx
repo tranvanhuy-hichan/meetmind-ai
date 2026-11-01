@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { clock } from "@/lib/format";
-import { avatarClass, IconCaption, initials } from "./Icons";
+import { avatarClass, Equalizer, IconCaption, initials } from "./Icons";
 import type { Language, MeetingStatus, Segment } from "@/lib/types";
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
   languages: Language[];
   status: MeetingStatus;
   onLang: (lang: string | null) => void;
+  /** Names of the people speaking right now. */
+  speaking?: string[];
 }
 
 const EMPTY: Record<MeetingStatus, string> = {
@@ -43,7 +45,7 @@ export function TranscriptList({
         const shown = translated ? translations[s.id] : s.text;
         return (
           <div key={s.id} className={`line ${header ? "new-speaker" : ""} ${s.is_final ? "" : "partial"}`}>
-            <div className="gutter">{header && <span className={`avatar ${avatarClass(s.speaker)}`} title={s.speaker}>{initials(s.speaker)}</span>}</div>
+            <div className="gutter">{header && <span className={`avatar ${avatarClass(s.speaker)} ${s.is_final ? "" : "speaking"}`} title={s.speaker}>{initials(s.speaker)}</span>}</div>
             <div>
               {header && (
                 <div className="who">
@@ -66,7 +68,9 @@ export function TranscriptList({
   );
 }
 
-export function TranscriptPanel({ segments, translations, lang, languages, status, onLang }: Props) {
+export function TranscriptPanel({ segments, translations, lang, languages, status, onLang, speaking = [] }: Props) {
+  const roster = Array.from(new Set(segments.map((s) => s.speaker)));
+  const live = status === "live" || status === "bot_joining";
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
   const [behind, setBehind] = useState(false);
@@ -95,8 +99,18 @@ export function TranscriptPanel({ segments, translations, lang, languages, statu
   return (
     <>
       <div className="side-toolbar">
-        <label htmlFor="lang" className="muted small">Hiển thị bằng</label>
-        <select id="lang" className="select" value={lang ?? ""} onChange={(e) => onLang(e.target.value || null)}>
+        <div className={`talk ${speaking.length ? "on" : ""}`} aria-live="polite">
+          {speaking.length ? (
+            <>
+              <Equalizer />
+              <span className="truncate"><b>{speaking.join(", ")}</b> đang nói</span>
+            </>
+          ) : (
+            <span className="muted truncate">{live ? "Chưa ai đang nói" : roster.length ? `${roster.length} người đã phát biểu` : ""}</span>
+          )}
+        </div>
+        <label htmlFor="lang" className="muted small">Dịch sang</label>
+        <select id="lang" className="select" value={lang ?? ""} onChange={(e) => onLang(e.target.value || null)} aria-label="Ngôn ngữ hiển thị">
           <option value="">Ngôn ngữ gốc</option>
           {languages.map((l) => (
             <option key={l.code} value={l.code}>{l.label}</option>

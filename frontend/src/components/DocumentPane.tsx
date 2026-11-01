@@ -166,9 +166,8 @@ export function DocumentPane(props: Props) {
       )}
 
       <div className="docs-main">
-        <DocumentList meetingId={meetingId} documents={documents} openIds={tabs.open} canManage={canManage} onOpen={openFromList} />
-
         <div className="viewer-col">
+          <div className="tabbar">
           <div className="tabs" role="tablist">
             {tabs.open.map((id) => {
               const doc = documents.find((d) => d.id === id);
@@ -181,6 +180,8 @@ export function DocumentPane(props: Props) {
                 </div>
               );
             })}
+          </div>
+          <DocumentList meetingId={meetingId} documents={documents} openIds={tabs.open} canManage={canManage} onOpen={openFromList} />
           </div>
 
           <div className="viewer-toolbar">
@@ -210,13 +211,9 @@ export function DocumentPane(props: Props) {
             ) : (
               <span className="muted">Chưa mở tài liệu nào</span>
             )}
+            <div className="grow" />
 
-          </div>
-
-          <div className="present-bar">
-            <IconPresent />
-            {!presenter && <span className="muted">Chưa ai điều khiển vị trí đọc của phòng</span>}
-            {isPresenter && <span>Bạn đang điều khiển vị trí đọc của cả phòng</span>}
+            {!presenter && <span className="muted small">Chưa có người trình bày</span>}
             {!isPresenter && presenter && <span className="muted">{following_ ? `Đang theo dõi ${presenter.name}` : `${presenter.name} đang trình bày`}</span>}
             <div className="grow" />
             {isPresenter && (
@@ -244,7 +241,7 @@ export function DocumentPane(props: Props) {
               </>
             )}
             {!presenter && <button className="btn sm" onClick={props.onClaim} disabled={!activeDoc}><IconPresent />Trình bày cho mọi người</button>}
-          </div>
+                    </div>
 
           {activeDoc && view ? (
             <PdfViewer

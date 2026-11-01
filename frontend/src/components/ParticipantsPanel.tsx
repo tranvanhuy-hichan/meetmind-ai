@@ -18,9 +18,10 @@ interface Props {
   onChanged: () => void;
   onMeetUrl: (url: string | null) => Promise<unknown>;
   meetRooms: boolean;
+  speaking?: string[];
 }
 
-export function ParticipantsPanel({ meeting, meId, isHost, canManage, participants, online, presenter, onChanged, onMeetUrl, meetRooms }: Props) {
+export function ParticipantsPanel({ meeting, meId, isHost, canManage, participants, online, presenter, onChanged, onMeetUrl, meetRooms, speaking = [] }: Props) {
   const [url, setUrl] = useState(meeting.meet_url ?? "");
   const [urlState, setUrlState] = useState<"idle" | "saving" | "saved" | string>("idle");
   const [copied, setCopied] = useState(false);
@@ -115,7 +116,7 @@ export function ParticipantsPanel({ meeting, meId, isHost, canManage, participan
       </div>
       {participants.map((p) => (
         <div className="person" key={p.user_id}>
-          <span className={`avatar ${avatarClass(p.name)}`} style={{ position: "relative" }}>
+          <span className={`avatar ${avatarClass(p.name)} ${speaking.some((n) => n.toLowerCase() === p.name.toLowerCase()) ? "speaking" : ""}`} style={{ position: "relative" }}>
             {initials(p.name)}
             <span className={`dot ${online.has(p.user_id) ? "on" : ""}`} title={online.has(p.user_id) ? "Đang trực tuyến" : "Ngoại tuyến"} style={{ position: "absolute", right: -3, bottom: -3, border: "2px solid #fff", width: 11, height: 11 }} />
           </span>

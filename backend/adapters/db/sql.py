@@ -219,6 +219,9 @@ class SqlRepository:
             row = await s.get(OrgRow, org_id)
         return _to(m.Organization, row) if row else None
 
+    async def update_org(self, org_id: str, **fields_: Any) -> None:
+        await self._update(OrgRow, [OrgRow.id == org_id], fields_)
+
     async def list_orgs_for_user(self, user_id: str) -> list[tuple[m.Organization, str]]:
         stmt = (
             select(OrgRow, OrgMemberRow.role)

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AppBar } from "@/components/AppBar";
 import { DocumentPane } from "@/components/DocumentPane";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
-import { IconBot, IconDoc, IconStop, IconUsers, IconVideo } from "@/components/Icons";
+import { Equalizer, IconBot, IconDoc, IconStop, IconUsers, IconVideo } from "@/components/Icons";
 import { useMeetingRoom } from "@/hooks/useMeetingRoom";
 import { api } from "@/lib/api";
 import { useRequireUser } from "@/lib/auth";
@@ -26,6 +26,35 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [side, setSide] = useState<"transcript" | "people">("transcript");
   const [busy, setBusy] = useState(false);
+  const [sideW, setSideW] = useState(420);
+  const dragging = useRef(false);
+
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem("meetmind.sideW"));
+      if (saved >= 300) setSideW(saved);
+    } catch {}
+  }, []);
+
+  function startResize(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    dragging.current = true;
+    let width = sideW;
+    document.body.classList.add("resizing");
+    const move = (ev: PointerEvent) => {
+      width = Math.round(Math.min(Math.max(window.innerWidth - ev.clientX - 12 - 6, 300), Math.min(900, window.innerWidth - 420)));
+      setSideW(width);
+    };
+    const up = () => {
+      dragging.current = false;
+      document.body.classList.remove("resizing");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      try { localStorage.setItem("meetmind.sideW", String(width)); } catch {}
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
   const [actionError, setActionError] = useState("");
   const [meetRooms, setMeetRooms] = useState(false);
   const [roomNote, setRoomNote] = useState<{ ok: boolean; text: string } | null>(null);
@@ -93,12 +122,17 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   return (
     <div className="room">
       <AppBar user={user} onLogout={logout}>
-        <div className="sep" />
-        <strong className="truncate" style={{ maxWidth: 360, fontSize: 15 }}>{meeting.title}</strong>
+        <strong className="rh-title truncate">{meeting.title}</strong>
         <span className={`status ${room.status}`}>{STATUS_LABEL[room.status]}</span>
         <span className="muted small row" style={{ gap: 5 }} title="Số người đang mở phiên họp này">
           <IconUsers />{room.online.size} trực tuyến
         </span>
+        {room.speaking.length > 0 && (
+          <span className="speaking-chip" title="Đang nói">
+            <Equalizer />
+            <span className="truncate">{room.speaking.join(", ")}</span>
+          </span>
+        )}
         <div className="grow" />
         {meetUrl && (
           <button className="btn sm on-dark primary" onClick={() => openMeet(meetUrl)} title="Mở Meet ở cửa sổ riêng. Dùng Win + ←/→ để xếp hai cửa sổ cạnh nhau.">
@@ -143,7 +177,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         )}
       </div>
 
-      <div className="room-body">
+      <div className="room-body" style={{ "--side-w": `${sideW}px` } as React.CSSProperties}>
         <DocumentPane
           meetingId={meeting.id}
           meId={me.user_id}
@@ -159,6 +193,8 @@ export default function RoomPage({ params }: { params: { id: string } }) {
           onMove={room.move}
           onDismissRequest={room.dismissRequest}
         />
+
+        <div className="splitter" role="separator" aria-orientation="vertical" aria-label="Kéo để đổi kích thước" title="Kéo để đổi kích thước" onPointerDown={startResize} onDoubleClick={() => { setSideW(420); try { localStorage.removeItem("meetmind.sideW"); } catch {} }} />
 
         <section className="side-pane" aria-label="Phụ đề và người tham gia">
           <div className="tabs" role="tablist">
@@ -177,6 +213,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
               languages={languages}
               status={room.status}
               onLang={room.changeLang}
+              speaking={room.speaking}
             />
           ) : (
             <ParticipantsPanel
@@ -190,6 +227,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
               onChanged={room.refreshParticipants}
               onMeetUrl={room.setMeetUrl}
               meetRooms={meetRooms}
+              speaking={room.speaking}
             />
           )}
         </section>

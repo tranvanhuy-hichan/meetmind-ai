@@ -154,6 +154,7 @@ class Container:
     minutes: MinutesService
     exporters: dict[str, MinutesExporter]
     finalize: Callable[[str], Awaitable[None]]
+    release_bots: Callable[[], Awaitable[int]] | None = None
     _tasks: set[asyncio.Task] = field(default_factory=set)
 
     @property
@@ -167,7 +168,7 @@ class Container:
         task.add_done_callback(self._tasks.discard)
 
     async def recover_interrupted(self) -> list[str]:
-        return await recover_interrupted(self.repo, self.finalize)
+        return await recover_interrupted(self.repo, self.finalize, self.release_bots)
 
     async def close(self) -> None:
         await self.pipeline.shutdown()
@@ -254,4 +255,5 @@ def build_container(settings: Settings, config: dict[str, Any]) -> Container:
         minutes=minutes,
         exporters={"docx": DocxExporter(), "md": MarkdownExporter()},
         finalize=post_meeting.finalize,
+        release_bots=getattr(bot, "release_orphans", None),
     )

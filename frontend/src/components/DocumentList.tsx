@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { fileSize } from "@/lib/format";
-import { IconFile, IconUpload } from "./Icons";
+import { IconFile, IconPlus, IconUpload } from "./Icons";
 import type { DocumentInfo } from "@/lib/types";
 
 interface Props {
@@ -14,10 +14,20 @@ interface Props {
   onOpen: (id: string) => void;
 }
 
+/** The "+ Tài liệu" button at the end of the tab strip: pick a shared document to open, or upload a new one. */
 export function DocumentList({ meetingId, documents, openIds, canManage, onOpen }: Props) {
   const input = useRef<HTMLInputElement>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const closed = documents.filter((d) => !openIds.includes(d.id));
+
+  useEffect(() => {
+    const away = (e: MouseEvent) => wrap.current && !wrap.current.contains(e.target as Node) && setOpen(false);
+    document.addEventListener("mousedown", away);
+    return () => document.removeEventListener("mousedown", away);
+  }, []);
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
@@ -28,6 +38,7 @@ export function DocumentList({ meetingId, documents, openIds, canManage, onOpen 
         const doc = await api.uploadDocument(meetingId, file);
         onOpen(doc.id);
       }
+      setOpen(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không tải lên được");
     } finally {
@@ -36,44 +47,36 @@ export function DocumentList({ meetingId, documents, openIds, canManage, onOpen 
     }
   }
 
+  if (!canManage && documents.length === 0) return null;
   return (
-    <aside className="doc-list" aria-label="Danh sách tài liệu">
-      <div className="panel-head" style={{ borderBottomColor: "var(--border)" }}>
-        <h3 className="grow">Tài liệu ({documents.length})</h3>
-        {canManage && (
-          <>
-            <button className="btn sm" disabled={busy} onClick={() => input.current?.click()}>
-              <IconUpload />
-              {busy ? "Đang tải…" : "Tải lên"}
+    <div className="menu-wrap doc-add" ref={wrap}>
+      <button className="btn sm ghost" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <IconPlus />Tài liệu{documents.length ? ` (${documents.length})` : ""}
+      </button>
+      {open && (
+        <div className="menu" role="menu">
+          {closed.length > 0 && <div className="menu-label">Đang chia sẻ</div>}
+          {closed.map((d) => (
+            <button key={d.id} className="menu-item" role="menuitem" onClick={() => { onOpen(d.id); setOpen(false); }}>
+              <IconFile />
+              <span className="grow">
+                <span className="truncate" style={{ display: "block", fontWeight: 600 }} title={d.name}>{d.name}</span>
+                <span className="muted small num">{d.page_count} trang · {fileSize(d.size)}</span>
+              </span>
             </button>
-            <input
-              ref={input}
-              type="file"
-              hidden
-              multiple
-              accept=".pdf,.doc,.docx,.odt,.ppt,.pptx,.odp"
-              onChange={(e) => upload(e.target.files)}
-            />
-          </>
-        )}
-      </div>
-      {error && <div className="notice warn error">{error}</div>}
-      <div className="doc-list-items">
-        {documents.length === 0 && (
-          <div className="muted small" style={{ padding: 12 }}>
-            {canManage ? "Tải lên PDF, Word hoặc PowerPoint để chia sẻ cho mọi người trong phiên." : "Chủ trì chưa chia sẻ tài liệu nào."}
-          </div>
-        )}
-        {documents.map((d) => (
-          <button key={d.id} className={`doc-item ${openIds.includes(d.id) ? "open" : ""}`} onClick={() => onOpen(d.id)}>
-            <IconFile />
-            <span className="grow">
-              <div className="truncate" style={{ fontWeight: 500 }} title={d.name}>{d.name}</div>
-              <div className="muted small num">{d.page_count} trang · {fileSize(d.size)}</div>
-            </span>
-          </button>
-        ))}
-      </div>
-    </aside>
+          ))}
+          {closed.length === 0 && documents.length > 0 && <div className="menu-empty">Mọi tài liệu đều đang mở.</div>}
+          {canManage && (
+            <>
+              <button className="menu-item add" role="menuitem" disabled={busy} onClick={() => input.current?.click()}>
+                <IconUpload />{busy ? "Đang tải…" : "Tải tài liệu lên (PDF, Word, PowerPoint)"}
+              </button>
+              <input ref={input} type="file" hidden multiple accept=".pdf,.doc,.docx,.odt,.ppt,.pptx,.odp" onChange={(e) => upload(e.target.files)} />
+            </>
+          )}
+          {error && <div className="menu-empty error">{error}</div>}
+        </div>
+      )}
+    </div>
   );
 }

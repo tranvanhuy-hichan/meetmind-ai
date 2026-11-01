@@ -40,6 +40,18 @@ class OrgService:
             raise NotFound("Không tìm thấy tổ chức")  # same answer for outsiders: do not reveal it exists
         return org, member
 
+    async def rename(self, org_id: str, actor_id: str, name: str) -> Organization:
+        org, _ = await self._manager(org_id, actor_id)
+        name = name.strip()
+        if not name:
+            raise Invalid("Tên tổ chức không được để trống")
+        await self._repo.update_org(org_id, name=name[:120])
+        org.name = name[:120]
+        return org
+
+    async def member_count(self, org_id: str) -> int:
+        return len(await self._repo.list_org_members(org_id))
+
     async def members(self, org_id: str, user_id: str) -> list[OrgMember]:
         await self.get(org_id, user_id)
         order = {"owner": 0, "admin": 1, "member": 2}

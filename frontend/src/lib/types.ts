@@ -21,6 +21,8 @@ export interface OrgSummary {
   id: string;
   name: string;
   role: OrgRole;
+  created_at: string | null;
+  member_count: number;
 }
 
 export interface OrgMemberInfo {
@@ -37,7 +39,7 @@ export interface OrgPending {
   created_at: string | null;
 }
 
-export interface OrgDetail extends OrgSummary {
+export interface OrgDetail extends Omit<OrgSummary, "member_count"> {
   members: OrgMemberInfo[];
   pending: OrgPending[];
 }

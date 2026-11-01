@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 
 _JOINED = {"joined_not_recording", "joined_recording", "joined_recording_paused"}
 _GONE = {"ended", "post_processing", "leaving", "data_deleted"}
+_ACTIVE = ("joining", "waiting_room", "joined_not_recording", "joined_recording", "joined_recording_paused")
 _OVERLAP = timedelta(seconds=2)  # re-read a little before the last poll so no update falls into a gap
 
 
@@ -99,6 +100,22 @@ class AttendeeBot:
 
     def events(self, meeting_id: str) -> AsyncIterator[MeetingEvent]:
         return self._drain(self._runs[meeting_id].events)
+
+    async def release_orphans(self) -> int:
+        """Make every bot that is still in a meeting leave. Called after a restart: the process that was listening to
+        those bots is gone, so they would only sit in the room (and keep a Chrome running) for nothing."""
+        mine = {run.bot_id for run in self._runs.values()}
+        data = await self._get("/api/v1/bots", [("states", state) for state in _ACTIVE])
+        released = 0
+        for bot in data.get("results", []) if isinstance(data, dict) else []:
+            if bot.get("id") in mine:
+                continue
+            try:
+                (await self._client.post(f"/api/v1/bots/{bot['id']}/leave")).raise_for_status()
+                released += 1
+            except httpx.HTTPError:
+                log.warning("could not make bot %s leave", bot.get("id"))
+        return released
 
     async def get_recording(self, meeting_id: str) -> str | None:
         return None  # downloading recordings is not implemented yet
@@ -200,7 +217,7 @@ class AttendeeBot:
             )
         )
 
-    async def _get(self, path: str, params: dict | None = None) -> Any:
+    async def _get(self, path: str, params: dict | list | None = None) -> Any:
         resp = await self._client.get(path, params=params)
         resp.raise_for_status()
         return resp.json()

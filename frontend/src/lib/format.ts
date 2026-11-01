@@ -46,3 +46,8 @@ export const ROLE_LABEL: Record<Role, string> = {
 export function canManage(role: Role): boolean {
   return role === "host" || role === "cohost";
 }
+
+export function dateShort(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+}

@@ -123,3 +123,19 @@ def test_meeting_invitation_by_email(client, make_user, make_org, outbox):
     # only managers invite
     assert client.post(f"/api/meetings/{mid}/invitations", json={"emails": ["z@example.com"]}, headers=guest.headers).status_code == 403
     assert client.post(f"/api/meetings/{mid}/invitations", json={"emails": ["nonsense"]}, headers=host.headers).status_code == 400
+
+
+def test_organization_basics_and_rename(client, make_user, make_org):
+    owner = make_user("owner@example.com", "Chủ")
+    member = make_user("member@example.com", "Thường")
+    org = make_org(owner, "Công ty A")
+    client.post(f"/api/orgs/{org}/invitations", json={"emails": ["member@example.com"]}, headers=owner.headers)
+
+    listed = client.get("/api/orgs", headers=owner.headers).json()[0]
+    assert listed["name"] == "Công ty A" and listed["member_count"] == 2 and listed["created_at"]
+    assert client.get(f"/api/orgs/{org}", headers=owner.headers).json()["created_at"] == listed["created_at"]
+
+    assert client.patch(f"/api/orgs/{org}", json={"name": "Công ty B"}, headers=member.headers).status_code == 403  # plain members cannot
+    assert client.patch(f"/api/orgs/{org}", json={"name": "   "}, headers=owner.headers).status_code == 400
+    assert client.patch(f"/api/orgs/{org}", json={"name": " Công ty B "}, headers=owner.headers).json()["name"] == "Công ty B"
+    assert client.get("/api/orgs", headers=member.headers).json()[0]["name"] == "Công ty B"

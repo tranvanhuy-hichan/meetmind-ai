@@ -137,3 +137,39 @@ async def test_attendee_polls_only_what_changed_since_the_previous_poll():
     assert asked[0] is None  # the first poll reads everything
     assert all(a is not None for a in asked[1:-1]) and len(asked) >= 3  # later polls only ask for changes
     assert asked[-1] is None  # the closing read at the end of the meeting is complete again
+
+
+async def test_orphaned_bots_are_told_to_leave_after_a_restart():
+    left: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            assert sorted(request.url.params.get_list("states")) == sorted(
+                ["joining", "waiting_room", "joined_not_recording", "joined_recording", "joined_recording_paused"]
+            )
+            return httpx.Response(200, json={"results": [{"id": "bot_a", "state": "joined_recording"}, {"id": "bot_b", "state": "joining"}]})
+        left.append(request.url.path)
+        return httpx.Response(200, json={}) if "bot_a" in request.url.path else httpx.Response(500)  # one of them refuses
+
+    client = httpx.AsyncClient(base_url="http://attendee", transport=httpx.MockTransport(handler))
+    bot = AttendeeBot("http://attendee", "k", client=client)
+    assert await bot.release_orphans() == 1  # bot_b failed, and that does not stop the rest
+    assert left == ["/api/v1/bots/bot_a/leave", "/api/v1/bots/bot_b/leave"]
+
+
+async def test_recovery_releases_orphaned_bots_even_when_nothing_was_live():
+    class EmptyRepo:
+        async def list_meetings_by_status(self, statuses):
+            return []
+
+    calls: list[str] = []
+
+    async def release() -> int:
+        calls.append("released")
+        return 2
+
+    async def finalize(meeting_id: str) -> None:
+        raise AssertionError("nothing to finalize")
+
+    assert await recover_interrupted(EmptyRepo(), finalize, release) == []
+    assert calls == ["released"]

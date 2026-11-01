@@ -121,3 +121,18 @@ export function initials(name: string): string {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[parts.length - 2][0] + parts[parts.length - 1][0]).toUpperCase();
 }
+
+/** Three bars that dance while somebody is speaking. */
+export const Equalizer = () => (
+  <span className="eq" aria-hidden="true">
+    <i />
+    <i />
+    <i />
+  </span>
+);
+
+export const IconHome = () => (
+  <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M3 11l9-8 9 8M5 10v10h14V10" />
+  </svg>
+);

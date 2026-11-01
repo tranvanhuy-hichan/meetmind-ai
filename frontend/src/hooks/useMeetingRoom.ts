@@ -13,6 +13,8 @@ import type {
   Segment,
 } from "@/lib/types";
 
+const SPEAKING_MS = 2500;
+
 type ServerEvent = { type: string } & Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 function upsert(list: Segment[], seg: Segment): Segment[] {
@@ -50,6 +52,16 @@ export function useMeetingRoom(meetingId: string) {
 
   const wsRef = useRef<WebSocket | null>(null);
   const langRef = useRef<string | null>(null);
+
+  // Who is speaking right now: anyone whose caption changed in the last SPEAKING_MS.
+  const lastSpoke = useRef(new Map<string, number>());
+  const quietTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [, setQuietTick] = useState(0);
+  const markSpeaking = useCallback((name: string) => {
+    lastSpoke.current.set(name, Date.now());
+    clearTimeout(quietTimer.current);
+    quietTimer.current = setTimeout(() => setQuietTick((n) => n + 1), SPEAKING_MS + 100); // re-render once they stop
+  }, []);
 
   const loadTranscript = useCallback(
     async (target: string | null) => {
@@ -119,6 +131,7 @@ export function useMeetingRoom(meetingId: string) {
           break;
         case "segment.partial":
         case "segment.final":
+          markSpeaking(e.segment.speaker);
           setSegments((prev) => upsert(prev, e.segment));
           break;
         case "segment.translation":
@@ -177,7 +190,7 @@ export function useMeetingRoom(meetingId: string) {
       clearTimeout(timer);
       wsRef.current?.close();
     };
-  }, [loaded, meetingId, loadTranscript]);
+  }, [loaded, meetingId, loadTranscript, markSpeaking]);
 
   const send = useCallback((msg: Record<string, unknown>) => {
     const ws = wsRef.current;
@@ -200,7 +213,11 @@ export function useMeetingRoom(meetingId: string) {
     [meetingId],
   );
 
+  const now = Date.now();
+  const speaking = [...lastSpoke.current].filter(([, at]) => now - at < SPEAKING_MS).map(([name]) => name);
+
   return {
+    speaking,
     detail,
     error,
     notice,

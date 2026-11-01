@@ -2,39 +2,23 @@
 
 import Link from "next/link";
 import { IconMeetMark, initials } from "./Icons";
-import type { OrgSummary, User } from "@/lib/types";
+import type { User } from "@/lib/types";
 
 interface Props {
   user: User | null;
   onLogout: () => void;
-  orgs?: OrgSummary[];
   children?: React.ReactNode;
 }
 
-export function AppBar({ user, onLogout, orgs = [], children }: Props) {
+/** Header of the meeting room: logo > Phiên họp > title, then whatever the page puts in it. */
+export function AppBar({ user, children }: Props) {
   return (
-    <header className="topbar">
-      <Link href="/" className="brand">
-        <IconMeetMark />
-        MeetMind
-      </Link>
-      {orgs.length > 0 && (
-        <>
-          <div className="sep" />
-          <span className="muted small truncate" style={{ maxWidth: 220 }}>
-            {orgs.length === 1 ? orgs[0].name : `${orgs.length} tổ chức`}
-          </span>
-        </>
-      )}
+    <header className="roomhead">
+      <Link href="/" className="rh-logo" title="Về trang chủ"><IconMeetMark /></Link>
+      <Link href="/meetings" className="rh-back">Phiên họp</Link>
+      <span className="rh-sep" aria-hidden>›</span>
       {children}
-      <div className="grow" />
-      {user && (
-        <>
-          <span className="avatar on-dark" title={user.email}>{initials(user.name)}</span>
-          <span className="truncate" style={{ maxWidth: 160 }} title={user.email}>{user.name}</span>
-          <button className="btn sm on-dark" onClick={onLogout}>Đăng xuất</button>
-        </>
-      )}
+      {user && <span className="avatar" style={{ marginLeft: "auto" }} title={`${user.name} · ${user.email}`}>{initials(user.name)}</span>}
     </header>
   );
 }
