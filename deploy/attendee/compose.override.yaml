@@ -1,0 +1,15 @@
+# Chồng lên dev.docker-compose.yaml của Attendee (make attendee-up dùng file này):
+#  - Attendee nghe ở cổng 8010 của máy, để không đụng cổng 8000 của MeetMind;
+#  - các dịch vụ của Attendee thấy MinIO và các dịch vụ khác trên máy qua host.docker.internal.
+services:
+  attendee-app-local:
+    ports: !override
+      - "8010:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  attendee-worker-local:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  attendee-scheduler-local:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

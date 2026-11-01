@@ -1,0 +1,4 @@
+.env
+attendee-src/
+.DS_Store
+*.log

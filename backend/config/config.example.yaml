@@ -1,0 +1,50 @@
+# Copy to config/config.yaml (or point MEETMIND_CONFIG_PATH at it). Anything left out keeps the demo default.
+# "${NAME}" is replaced by the environment variable NAME, so secrets can stay out of this file.
+
+bot:
+  adapter: attendee                      # fake = scripted demo meeting | attendee = real Google Meet bot
+  base_url: http://localhost:8001        # your Attendee instance
+  api_key: ${ATTENDEE_API_KEY}
+  bot_name: MeetMind
+  poll_interval_s: 2
+  transcription_settings:                # đưa nguyên cho Attendee. Mặc định Attendee dùng phụ đề có sẵn của Meet
+    meeting_closed_captions:
+      google_meet_language: vi-VN        # MỘT ngôn ngữ cho cả cuộc họp; người nói ngôn ngữ khác sẽ bị nhận sai
+      merge_consecutive_captions: true   # nối các dòng phụ đề liền nhau của cùng một người
+
+asr:
+  adapter: none                          # none | faster_whisper (needs: pip install '.[whisper]'); only used if the bot gives no transcript
+  # model: small
+  # device: auto
+  # compute_type: int8
+
+llm:
+  adapter: openai_compat                 # demo = rules only | openai_compat = Ollama, vLLM, llama.cpp, ...
+  base_url: http://localhost:11434/v1    # Ollama
+  realtime_model: qwen2.5:3b             # small and fast: translation while people talk
+  report_model: qwen2.5:3b               # can be larger: runs once after the meeting
+  timeout_s: 120
+
+translator:
+  adapter: llm                           # llm | demo
+
+minutes:
+  auto: true                             # draft the minutes as soon as the meeting ends
+  output_lang: Vietnamese
+
+storage:
+  adapter: minio                         # local | minio
+  endpoint: ${MINIO_ENDPOINT}
+  access_key: ${MINIO_ACCESS_KEY}
+  secret_key: ${MINIO_SECRET_KEY}
+  bucket: ${MINIO_BUCKET}
+  secure: false
+
+email:
+  adapter: smtp                          # console = print emails to the log (sign-in code shown on screen) | smtp
+  host: smtp.example.com
+  port: 587
+  sender: no-reply@example.com
+  sender_name: MeetMind
+  username: ${SMTP_USERNAME}
+  password: ${SMTP_PASSWORD}

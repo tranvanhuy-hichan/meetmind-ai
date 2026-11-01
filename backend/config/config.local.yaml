@@ -1,0 +1,32 @@
+# Chạy trực tiếp trên máy (không Docker): bot giả lập, dịch và biên bản bằng Ollama, tài liệu lưu trong MinIO.
+# Dùng: MEETMIND_CONFIG_PATH=config/config.local.yaml (đã đặt sẵn trong backend/.env)
+bot:
+  adapter: ${BOT_ADAPTER:-fake}       # fake = cuộc họp mẫu | attendee = Google Meet thật (make use-attendee)
+  speed: 2                            # chỉ cho bot giả lập: phát cuộc họp mẫu nhanh gấp đôi
+  base_url: ${ATTENDEE_URL:-http://localhost:8010}
+  api_key: ${ATTENDEE_API_KEY:-}
+  bot_name: MeetMind
+  transcription_settings:             # Attendee lấy phụ đề có sẵn của Meet; ngôn ngữ phụ đề là MỘT ngôn ngữ cố định
+    meeting_closed_captions:
+      google_meet_language: ${MEET_CAPTION_LANG:-vi-VN}
+      merge_consecutive_captions: true
+
+llm:
+  adapter: openai_compat
+  base_url: http://localhost:11434/v1 # Ollama
+  realtime_model: qwen2.5:3b          # dịch trực tiếp: đo thực tế trên RTX 3050 4 GB cho trung vị 0,4 giây một câu
+  report_model: qwen2.5:3b            # biên bản (chạy một lần sau họp)
+  timeout_s: 180
+
+translator:
+  adapter: llm
+
+storage:
+  adapter: minio
+  endpoint: ${MINIO_ENDPOINT}
+  access_key: ${MINIO_ACCESS_KEY}
+  secret_key: ${MINIO_SECRET_KEY}
+  bucket: ${MINIO_BUCKET:-meetmind}
+
+email:
+  adapter: console

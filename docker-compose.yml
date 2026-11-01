@@ -1,0 +1,44 @@
+# MeetMind dùng MinIO và PostgreSQL ĐÃ CÀI SẴN trên máy (không kèm theo trong compose).
+# Backend chạy ở mạng của máy chủ (network_mode: host, chỉ Linux) để thấy các dịch vụ đang nghe ở localhost.
+# Cấu hình nằm trong .env (tạo bằng `make setup`) và backend/config/config.yaml.
+services:
+  backend:
+    build: ./backend
+    network_mode: host # lắng nghe trực tiếp cổng 8000 của máy
+    environment:
+      MEETMIND_JWT_SECRET: ${MEETMIND_JWT_SECRET:?chạy make setup để tạo .env}
+      MEETMIND_APP_URL: ${MEETMIND_APP_URL:-http://localhost:3000}
+      MEETMIND_DATABASE_URL: ${DATABASE_URL:?điền DATABASE_URL trong .env}
+      MEETMIND_DATA_DIR: /data
+      MEETMIND_CONFIG_PATH: /config/config.yaml
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-localhost:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?điền MINIO_ACCESS_KEY trong .env}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?điền MINIO_SECRET_KEY trong .env}
+      MINIO_BUCKET: ${MINIO_BUCKET:-meetmind}
+      MEETMIND_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      MEETMIND_GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MEETMIND_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000}
+      MEETMIND_GOOGLE_ALLOWED_DOMAINS: ${GOOGLE_ALLOWED_DOMAINS:-[]}
+      MEETMIND_EMAIL_CODE: ${EMAIL_CODE:-auto}
+      BOT_ADAPTER: ${BOT_ADAPTER:-fake}
+      ATTENDEE_URL: ${ATTENDEE_URL:-http://localhost:8010}
+      ATTENDEE_API_KEY: ${ATTENDEE_API_KEY:-}
+      MEET_CAPTION_LANG: ${MEET_CAPTION_LANG:-vi-VN}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    volumes:
+      - backend-data:/data
+      - ./backend/config:/config:ro
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE:-http://localhost:8000}
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  backend-data:
