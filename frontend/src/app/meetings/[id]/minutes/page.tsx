@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Shell } from "@/components/Shell";
+import { AppBar } from "@/components/AppBar";
 import { avatarClass, IconCheck, IconDoc, IconPlus, IconUsers, initials } from "@/components/Icons";
 import { TranscriptList } from "@/components/TranscriptPanel";
 import { api } from "@/lib/api";
@@ -121,43 +121,46 @@ export default function MinutesPage({ params }: { params: { id: string } }) {
   const people = detail?.participants ?? [];
 
   return (
-    <Shell user={user} onLogout={logout}>
-      <div className="crumbs"><Link href="/">Phiên họp</Link> / <Link href={`/meetings/${params.id}`}>{title || "Phiên họp"}</Link> / <span>Biên bản</span></div>
-
-      <div className="topline" style={{ marginTop: 10 }}>
-        <div className="grow">
-          <h1>{title || "…"}</h1>
-          <p>
-            {detail?.meeting.started_at ? `Bắt đầu ${dateTime(detail.meeting.started_at)}` : "Biên bản cuộc họp"}
-            {updatedAt && ` · cập nhật ${dateTime(updatedAt)}`}
-          </p>
-        </div>
-        {minutes && <span className={`tag ${status === "final" ? "accent" : ""}`}>{status === "final" ? "Đã chốt" : "Bản nháp"}</span>}
-        {dirty && <span className="tag" style={{ background: "var(--sun-soft)", color: "#7a5a00" }}>Chưa lưu</span>}
+    <div className="room minutes-page">
+      <AppBar user={user} onLogout={logout}>
+        <Link href={`/meetings/${params.id}`} className="rh-title truncate" title="Về phòng họp">{title || "Phiên họp"}</Link>
+        <span className="rh-sep" aria-hidden>›</span>
+        <strong className="rh-title">Biên bản</strong>
+        {minutes && <span className={`status ${status === "final" ? "ready" : ""}`}>{status === "final" ? "Đã chốt" : "Bản nháp"}</span>}
+        {dirty && <span className="status processing">Chưa lưu</span>}
+        <div className="grow" />
         {minutes && (
           <>
-            <button className="btn" onClick={() => api.exportMinutes(params.id, "docx", title)} disabled={dirty} title={dirty ? "Lưu trước khi xuất" : ""}>Xuất Word</button>
-            <button className="btn" onClick={() => api.exportMinutes(params.id, "md", title)} disabled={dirty} title={dirty ? "Lưu trước khi xuất" : ""}>Markdown</button>
+            <button className="btn sm on-dark" onClick={() => api.exportMinutes(params.id, "docx", title)} disabled={dirty} title={dirty ? "Lưu trước khi xuất" : ""}>Xuất Word</button>
+            <button className="btn sm on-dark" onClick={() => api.exportMinutes(params.id, "md", title)} disabled={dirty} title={dirty ? "Lưu trước khi xuất" : ""}>Markdown</button>
           </>
         )}
         {manage && (
-          <button className="btn" onClick={generate} disabled={!!busy}>
+          <button className="btn sm on-dark" onClick={generate} disabled={!!busy}>
             {busy === "generate" ? "Đang tạo…" : minutes ? "Tạo lại bằng AI" : "Tạo biên bản bằng AI"}
           </button>
         )}
         {manage && minutes && (
           <>
-            <button className="btn" onClick={() => save("draft")} disabled={!!busy || !dirty}>Lưu nháp</button>
-            <button className="btn primary" onClick={() => save("final")} disabled={!!busy || (status === "final" && !dirty)}>Chốt biên bản</button>
+            <button className="btn sm on-dark" onClick={() => save("draft")} disabled={!!busy || !dirty}>Lưu nháp</button>
+            <button className="btn sm on-dark primary" onClick={() => save("final")} disabled={!!busy || (status === "final" && !dirty)}>Chốt biên bản</button>
           </>
         )}
+      </AppBar>
+
+      <div className="mn-bar">
+        <div className="tabs" role="tablist">
+          <button role="tab" aria-selected={tab === "minutes"} className={`tab ${tab === "minutes" ? "active" : ""}`} onClick={() => setTab("minutes")}>Biên bản</button>
+          <button role="tab" aria-selected={tab === "transcript"} className={`tab ${tab === "transcript" ? "active" : ""}`} onClick={() => setTab("transcript")}>Toàn văn ({segments.length})</button>
+        </div>
+        <div className="grow" />
+        <span className="muted small">
+          {detail?.meeting.started_at ? `Bắt đầu ${dateTime(detail.meeting.started_at)}` : "Biên bản cuộc họp"}
+          {updatedAt && ` · cập nhật ${dateTime(updatedAt)}`}
+        </span>
       </div>
 
-      <div className="segmented" role="tablist" style={{ marginBottom: 16 }}>
-        <button role="tab" aria-selected={tab === "minutes"} className={tab === "minutes" ? "active" : ""} onClick={() => setTab("minutes")}>Biên bản</button>
-        <button role="tab" aria-selected={tab === "transcript"} className={tab === "transcript" ? "active" : ""} onClick={() => setTab("transcript")}>Toàn văn ({segments.length})</button>
-      </div>
-
+      <div className="mn-body">
       {error && <div className="notice warn bordered" style={{ marginBottom: 14 }}>{error}</div>}
 
       {tab === "minutes" && !minutes && (
@@ -239,7 +242,8 @@ export default function MinutesPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       )}
-    </Shell>
+      </div>
+    </div>
   );
 }
 
