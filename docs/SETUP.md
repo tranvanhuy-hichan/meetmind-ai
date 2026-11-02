@@ -75,7 +75,7 @@ Thiếu origin thì `The given origin is not allowed`; thiếu redirect URI thì
 ### 3.4 Scope và test user
 
 1. **OAuth consent screen → Data access (Scopes)**: thêm `https://www.googleapis.com/auth/meetings.space.created` (chỉ thấy phòng do chính ứng dụng tạo).
-2. **Audience (Test users)**: thêm email từng người sẽ đăng nhập hoặc tạo phòng khi ứng dụng còn ở chế độ Testing.
+2. **Audience (Test users)**: thêm email từng người sẽ đăng nhập hoặc tạo phòng khi ứng dụng còn ở chế độ Testing (từng bước ở mục 12).
 3. Muốn mọi người dùng được mà không cần thêm từng email thì phải đưa ứng dụng lên **In production**; scope nhạy cảm có thể phải qua xác minh của Google. Chưa làm.
 
 ### 3.5 Khai báo trong MeetMind
@@ -303,3 +303,41 @@ MinIO: `storage.adapter: minio` cùng endpoint, khóa và bucket trong `config.y
 - Chuyển từ bot Attendee sang **Zoom RTMS**: Zoom ghi rõ Meeting SDK không dành cho bot hoặc trợ lý ghi chú AI. Bot hiện tại chạy được khi phát triển nhưng có thể bị chặn khi phát hành rộng.
 - Nộp app Zoom để duyệt (và dùng token OBF) nếu cần họp của tài khoản Zoom khác.
 - Thử một cuộc họp Google Meet thật từ đầu đến cuối; quyết định đưa ứng dụng Google lên In production hay giữ Testing.
+
+## 12. Ai dùng được hệ thống (chế độ thử nghiệm)
+
+Ứng dụng Google ở chế độ **Testing** và app Zoom ở chế độ **Development** (chưa phát hành). Hai chế độ này giới hạn ai đăng nhập, ai tạo họp và họp của ai bot vào được. Phần Google đã biết chắc; phần Zoom tôi suy ra từ cách Zoom hoạt động chứ chưa thử với tài khoản Zoom thứ hai.
+
+### 12.1 Ai làm được gì
+
+| Việc | Ai làm được | Điều kiện |
+|---|---|---|
+| Tạo phiên họp trong MeetMind | Mọi thành viên của tổ chức | Chỉ cần thuộc tổ chức (mã không phân biệt vai trò) |
+| Đăng nhập MeetMind bằng Google | Chỉ email nằm trong **Test users** | Tối đa 100 email |
+| Tạo phòng Google Meet từ MeetMind | Test user đã đồng ý với Google một lần | Đã thêm scope `meetings.space.created` (mục 3.4) |
+| Tạo cuộc họp Zoom tự động | Tài khoản Zoom của **chủ app** (có thể cả tài khoản cùng tổ chức Zoom) | App Zoom chưa duyệt: người dùng tài khoản Zoom khác bị Zoom chặn khi xin quyền (chưa biết thông báo chính xác) |
+| Bot và video nhúng vào họp Zoom | Họp do **tài khoản chủ app** tạo | Họp của tài khoản Zoom khác cần app được duyệt và token OBF (chưa thử) |
+| Vào họp bằng link Meet hoặc Zoom | Bất kỳ ai có link | Không cần tài khoản MeetMind |
+| Xem phụ đề, tài liệu, biên bản | Người đã đăng nhập MeetMind và được mời | Phải là Test user vì đăng nhập qua Google |
+
+Người chỉ cần **dự họp** (bấm link vào Meet hoặc Zoom) không cần gì ở Google hay MeetMind. Người muốn **xem trong MeetMind** thì phải đăng nhập, nên phải có tên trong Test users.
+
+### 12.2 Thêm người dùng thử (Google Test users)
+
+1. https://console.cloud.google.com, chọn đúng dự án chứa OAuth client của MeetMind.
+2. **Google Auth Platform** (hoặc APIs & Services → OAuth consent screen) → mục **Audience**.
+3. Kéo xuống **Test users** → **Add users** → nhập Gmail của từng người (mỗi dòng một email) → **Save**.
+4. Có hiệu lực ngay hoặc sau vài phút. Người đó phải đăng nhập MeetMind bằng **đúng email vừa thêm**.
+5. Trong MeetMind, mời họ vào tổ chức (trang tổ chức, mời bằng email) hoặc vào một phiên (tab Người tham gia → Mời tham gia). Người chưa có tài khoản sẽ vào ngay khi đăng nhập lần đầu bằng đúng email đó.
+
+Nếu người dùng bị Google chặn khi đăng nhập ("Access blocked" hoặc "app chưa được xác minh"), gần như chắc chắn email của họ chưa nằm trong Test users, hoặc họ đăng nhập bằng một tài khoản Google khác.
+
+### 12.3 Mở rộng ra ngoài giới hạn thử nghiệm
+
+| Hướng | Việc cần làm | Đánh đổi |
+|---|---|---|
+| Hơn 100 người, hoặc không muốn thêm từng email | Đưa ứng dụng Google lên **In production** (Audience → Publish app) | Scope Meet thuộc nhóm nhạy cảm nên Google có thể yêu cầu **xác minh ứng dụng** (trang chính sách riêng tư, video giải thích); mất thời gian. Có thể chỉ cho một tên miền email bằng `GOOGLE_ALLOWED_DOMAINS=["congty.com"]` |
+| Mọi người trong tổ chức tạo họp Zoom (dùng nội bộ) | Một tài khoản Zoom chung làm chủ phòng: tạo app **Server-to-Server OAuth**, backend tự tạo họp dưới tài khoản đó, không ai phải cấp quyền Zoom. Họp thuộc tài khoản chung nên bot và video nhúng vào được | Chưa làm trong mã. Zoom Pro thường chỉ cho **một cuộc họp cùng lúc trên một tài khoản chủ trì**; nhiều họp song song cần nhiều chủ trì hoặc thêm giấy phép |
+| Khách hàng dùng bằng tài khoản Zoom riêng của họ | **Nộp app Zoom để duyệt** (Marketplace) và dùng token OBF; về lâu dài dùng **RTMS** (Zoom không hỗ trợ bot dùng Meeting SDK) | Duyệt mất vài tuần đến vài tháng; RTMS cần Zoom Developer Pack có phí (xem mục 11) |
+
+Nên giữ chế độ thử nghiệm khi chỉ dùng trong nhóm nhỏ quen biết; chuyển sang phát hành chỉ khi cần người lạ tự đăng ký dùng.

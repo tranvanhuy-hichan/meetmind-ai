@@ -52,6 +52,22 @@ Zoom chỉ nhận địa chỉ callback dạng `https://`. Khi chạy trên máy
 (dịch vụ `cloudflared` trong `docker-compose.yml`, profile `tunnel`). Cách dựng: [docs/SETUP.md](docs/SETUP.md) mục 5.
 **Cảnh báo:** khi đưa giao diện và API ra internet phải có cách chặn người lạ (đăng nhập Google có danh sách Test users, hoặc Cloudflare Access). Xem mục "Bảo mật" trong SETUP.
 
+## Ai dùng được hệ thống (chế độ thử nghiệm)
+
+Cả ứng dụng Google lẫn app Zoom đang ở **chế độ thử nghiệm** (chưa phát hành), nên không phải ai cũng dùng được mọi chức năng. Chi tiết và cách thêm người: [docs/SETUP.md mục 12](docs/SETUP.md#12-ai-dùng-được-hệ-thống-chế-độ-thử-nghiệm).
+
+| Việc | Ai làm được | Điều kiện |
+|---|---|---|
+| Tạo phiên họp trong MeetMind | Mọi thành viên của tổ chức | Là thành viên tổ chức (không phân biệt vai trò) |
+| Đăng nhập MeetMind bằng Google | Chỉ email nằm trong **Test users** của ứng dụng Google | Tối đa 100 email; thêm ở Google Cloud Console → Audience |
+| Tạo phòng Google Meet từ MeetMind | Test user đã đồng ý với Google một lần | Cần thêm scope `meetings.space.created` |
+| Tạo cuộc họp Zoom tự động từ MeetMind | Tài khoản Zoom của **chủ app** (và có thể tài khoản cùng tổ chức Zoom) | App Zoom chưa duyệt: người dùng tài khoản Zoom khác bị chặn ở bước xin quyền |
+| Bot và video nhúng vào họp Zoom | Họp do **tài khoản chủ app** tạo | Họp của tài khoản Zoom khác cần Zoom duyệt app và token OBF (chưa thử) |
+| Vào họp (bấm link Meet hoặc Zoom) | Bất kỳ ai có link | Không cần tài khoản MeetMind |
+| Xem phụ đề, tài liệu, biên bản | Người đã đăng nhập MeetMind và được mời vào phiên | Phải là Test user (đăng nhập Google) |
+
+Muốn mở rộng: thêm email vào Test users (nhanh, tối đa 100 người), hoặc đưa ứng dụng Google lên *In production* và nộp app Zoom để duyệt (lâu, có thể phải xác minh). Với Zoom còn một cách cho nội bộ là dùng một tài khoản Zoom chung làm chủ mọi phòng (app Server-to-Server OAuth); xem SETUP mục 12.
+
 ## Cấu trúc mã
 
 ```
