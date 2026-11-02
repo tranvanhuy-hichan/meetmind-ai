@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { avatarClass, IconVideo } from "./Icons";
-import { dateTime, ROLE_LABEL, STATUS_LABEL } from "@/lib/format";
+import { dateTime, PLATFORM_LABEL, ROLE_LABEL, STATUS_LABEL } from "@/lib/format";
 import type { MeetingSummary } from "@/lib/types";
 
 export const isLive = (m: MeetingSummary) => m.status === "live" || m.status === "bot_joining";
@@ -37,7 +37,7 @@ export function MeetingTable({ meetings, orgName, empty = "Chưa có phiên họ
                 <span className={`avatar ${avatarClass(m.title)}`}><IconVideo /></span>
                 <span>
                   <span style={{ display: "block" }}>{m.title}</span>
-                  {orgName && <span className="muted small" style={{ fontWeight: 500 }}>{orgName.get(m.org_id) ?? "Khách mời"}</span>}
+                  <span className="muted small" style={{ fontWeight: 500 }}>{[PLATFORM_LABEL[m.platform ?? "meet"], orgName?.get(m.org_id) ?? (orgName ? "Khách mời" : "")].filter(Boolean).join(" · ")}</span>
                 </span>
               </Link>
             </td>

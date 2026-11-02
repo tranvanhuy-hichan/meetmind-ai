@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable
@@ -11,6 +12,7 @@ from adapters.asr.faster_whisper import FasterWhisperASR
 from adapters.auth.google import GoogleIdentityVerifier
 from adapters.bot.attendee import AttendeeBot
 from adapters.bot.fake import FakeBot
+from adapters.bot.router import PlatformBotRouter
 from adapters.bus.memory import MemoryBus
 from adapters.db.sql import SqlRepository
 from adapters.docproc.libreoffice import LibreOfficeProcessor
@@ -20,12 +22,14 @@ from adapters.export.docx import DocxExporter
 from adapters.export.markdown import MarkdownExporter
 from adapters.llm.demo import DemoLLM
 from adapters.meet.google import GoogleMeetRooms
+from adapters.meet.zoom import ZoomMeetRooms
 from adapters.llm.openai_compat import OpenAICompatLLM
 from adapters.storage.local import LocalStore
 from adapters.storage.minio_store import MinioStore
 from adapters.translate.demo import DemoTranslator
 from adapters.translate.llm import LLMTranslator
 from app.settings import Settings
+from core.platforms import MEET, ZOOM
 from core.ports import ASR, LLM, EmailSender, IdentityVerifier, MeetingBot, MinutesExporter, ObjectStore, Translator
 from core.prompts import PromptLibrary
 from core.services.access import AccessService
@@ -46,7 +50,25 @@ from core.services.translation import TranslationService
 log = logging.getLogger(__name__)
 
 
+_ZOOM_DEFAULTS = {
+    "transcription_settings": {
+        "meeting_closed_captions": {"zoom_language": os.environ.get("ZOOM_CAPTION_LANG", "Vietnamese"), "merge_consecutive_captions": True}
+    },
+    "bot_options": {"zoom_settings": {"sdk": "web"}},
+}
+
+
 def _bot(cfg: dict[str, Any]) -> MeetingBot:
+    """The bot for Meet and the one for Zoom: the same options, overridden by `bot.zoom` when it is set. Without
+    `bot.zoom`, Zoom keeps everything except the transcription, which comes from Zoom's own closed captions (the web
+    SDK is what exposes them), so no Deepgram key is needed."""
+    zoom_cfg = cfg.get("zoom") or _ZOOM_DEFAULTS
+    meet = _bot_adapter({k: v for k, v in cfg.items() if k != "zoom"})
+    zoom = _bot_adapter({k: v for k, v in {**cfg, **zoom_cfg}.items() if k != "zoom"})
+    return PlatformBotRouter({MEET: meet, ZOOM: zoom})
+
+
+def _bot_adapter(cfg: dict[str, Any]) -> MeetingBot:
     kind = cfg.get("adapter", "fake")
     if kind == "fake":
         return FakeBot(speed=float(cfg.get("speed", 1.0)), gap_s=float(cfg.get("gap_s", 3.0)))
@@ -57,6 +79,7 @@ def _bot(cfg: dict[str, Any]) -> MeetingBot:
             bot_name=cfg.get("bot_name", "MeetMind"),
             poll_interval_s=float(cfg.get("poll_interval_s", 0.5)),
             stable_s=float(cfg.get("stable_s", 1.5)),
+            bot_options=cfg.get("bot_options"),
             transcription_settings=cfg.get("transcription_settings"),
         )
     raise ValueError(f"unknown bot adapter: {kind}")
@@ -147,6 +170,7 @@ class Container:
     auth: AuthService
     identity: IdentityVerifier | None
     meet_rooms: MeetRoomService | None
+    zoom_rooms: MeetRoomService | None
     orgs: OrgService
     meetings: MeetingService
     documents: DocumentService
@@ -225,6 +249,20 @@ def build_container(settings: Settings, config: dict[str, Any]) -> Container:
         if settings.google_client_id and settings.google_client_secret
         else None
     )
+    zoom_rooms = (
+        MeetRoomService(
+            repo,
+            access,
+            ZoomMeetRooms(
+                settings.zoom_client_id,
+                settings.zoom_client_secret,
+                settings.zoom_redirect_uri or f"{settings.public_api_url.rstrip('/')}/api/zoom/callback",
+            ),
+            settings.jwt_secret,
+        )
+        if settings.zoom_client_id and settings.zoom_client_secret
+        else None
+    )
     email_code = {"on": True, "off": False}.get(settings.email_code.lower(), identity is None)
 
     return Container(
@@ -241,6 +279,7 @@ def build_container(settings: Settings, config: dict[str, Any]) -> Container:
         auth=AuthService(repo, mailer, invitations, email_code_enabled=email_code),
         identity=identity,
         meet_rooms=meet_rooms,
+        zoom_rooms=zoom_rooms,
         orgs=OrgService(repo, invitations, settings.app_url),
         meetings=MeetingService(repo, access, pipeline, bus, invitations, settings.app_url),
         documents=DocumentService(

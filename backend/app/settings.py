@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # Creating Meet rooms from MeetMind needs the client secret as well, and the address the browser uses to reach
     # this API: Google sends the user back to <public_api_url>/api/google/callback (register it in the Google console).
     google_client_secret: str = ""
+    zoom_client_id: str = ""  # a Zoom General app; Zoom sends the user back to <public_api_url>/api/zoom/callback
+    zoom_client_secret: str = ""
+    zoom_redirect_uri: str = ""  # Zoom refuses "localhost", so locally this is http://127.0.0.1:8000/api/zoom/callback
     public_api_url: str = "http://localhost:8000"
     meet_access_type: str = "OPEN"  # OPEN: anyone with the link joins, so the bot is not left waiting to be admitted
     # Sign-in by emailed code: "auto" = only when Google sign-in is not configured, "on", or "off".

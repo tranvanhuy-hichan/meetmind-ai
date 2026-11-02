@@ -20,7 +20,7 @@ $$(grep -E '^$(1)=' .env | head -1 | cut -d= -f2-)
 endef
 
 .PHONY: help setup check check-env db-help ollama up up-demo start down restart logs ps status shell test reset-data reset-config \
-	attendee attendee-setup attendee-bucket attendee-start attendee-key attendee-rekey attendee-down attendee-logs use-attendee use-demo
+	attendee attendee-setup attendee-bucket attendee-start attendee-key attendee-rekey attendee-zoom attendee-down attendee-logs use-attendee use-demo
 
 help: ## Danh sách lệnh
 	@echo "MeetMind"
@@ -153,6 +153,11 @@ attendee-rekey: ## Tạo lại API key (dùng khi đã xóa dữ liệu Attendee
 	@$(MAKE) --no-print-directory attendee-key
 
 attendee: attendee-setup attendee-start attendee-key ## Dựng Attendee từ đầu đến cuối (tải, chạy, tạo API key)
+
+attendee-zoom: ## Nạp ZOOM_CLIENT_ID và ZOOM_CLIENT_SECRET trong .env vào Attendee (cho bot vào họp Zoom). Chạy lại khi đổi secret
+	@id=$$(grep '^ZOOM_CLIENT_ID=' .env | cut -d= -f2-); secret=$$(grep '^ZOOM_CLIENT_SECRET=' .env | cut -d= -f2-); \
+	[ -n "$$id" ] && [ -n "$$secret" ] || { echo "Điền ZOOM_CLIENT_ID và ZOOM_CLIENT_SECRET trong .env trước (docs/SETUP.md mục 4)"; exit 1; }; \
+	ZC_ID="$$id" ZC_SECRET="$$secret" $(ATTENDEE_COMPOSE) exec -T -e ZC_ID -e ZC_SECRET attendee-app-local python manage.py shell < deploy/attendee/set_zoom_credentials.py 2>&1 | grep -E "^OK|Error|error" || { echo "Không nạp được. Attendee đang chạy chưa? (make status)"; exit 1; }
 
 attendee-logs: ## Xem log Attendee
 	$(ATTENDEE_COMPOSE) logs -f --tail=100 attendee-app-local attendee-worker-local

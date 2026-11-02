@@ -8,6 +8,7 @@ services:
     environment:
       MEETMIND_JWT_SECRET: ${MEETMIND_JWT_SECRET:?chạy make setup để tạo .env}
       MEETMIND_APP_URL: ${MEETMIND_APP_URL:-http://localhost:3000}
+      MEETMIND_CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000"]}
       MEETMIND_DATABASE_URL: ${DATABASE_URL:?điền DATABASE_URL trong .env}
       MEETMIND_DATA_DIR: /data
       MEETMIND_CONFIG_PATH: /config/config.yaml
@@ -17,6 +18,9 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:-meetmind}
       MEETMIND_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       MEETMIND_GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MEETMIND_ZOOM_CLIENT_ID: ${ZOOM_CLIENT_ID:-}
+      MEETMIND_ZOOM_CLIENT_SECRET: ${ZOOM_CLIENT_SECRET:-}
+      MEETMIND_ZOOM_REDIRECT_URI: ${ZOOM_REDIRECT_URI:-}
       MEETMIND_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000}
       MEETMIND_GOOGLE_ALLOWED_DOMAINS: ${GOOGLE_ALLOWED_DOMAINS:-[]}
       MEETMIND_EMAIL_CODE: ${EMAIL_CODE:-auto}
@@ -39,6 +43,18 @@ services:
       - backend
     ports:
       - "3000:3000"
+
+  # Địa chỉ https công khai cho các callback OAuth (Zoom không nhận http://localhost). Không chạy mặc định:
+  #   docker compose --profile tunnel up -d cloudflared
+  # Cần CLOUDFLARE_TUNNEL_TOKEN trong .env; hostname và đích (http://localhost:8000) cấu hình trên Cloudflare.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    network_mode: host # để đích http://localhost:8000 là backend trên máy
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
 
 volumes:
   backend-data:

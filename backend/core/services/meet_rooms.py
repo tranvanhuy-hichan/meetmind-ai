@@ -35,7 +35,10 @@ class MeetRoomService:
         meeting_id = payload["m"]
         await self._access.manager(meeting_id, payload["u"])  # still allowed to manage it
         url = await self._rooms.create_room(code)
-        await self._repo.update_meeting(meeting_id, meet_url=url)
+        fields = {"meet_url": str(url)}
+        if getattr(url, "password", None):
+            fields["zoom_password"] = url.password
+        await self._repo.update_meeting(meeting_id, **fields)
         return meeting_id
 
     def _sign(self, payload: dict) -> str:
@@ -54,4 +57,4 @@ class MeetRoomService:
                 raise ValueError("expired")
             return payload
         except (ValueError, KeyError, json.JSONDecodeError):
-            raise Invalid("Yêu cầu tạo phòng Meet không hợp lệ hoặc đã hết hạn. Hãy thử lại") from None
+            raise Invalid("Yêu cầu tạo phòng họp không hợp lệ hoặc đã hết hạn. Hãy thử lại") from None

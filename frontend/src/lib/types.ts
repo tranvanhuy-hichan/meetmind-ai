@@ -51,12 +51,15 @@ export interface InviteResult {
   email_failed: string[];
 }
 
+export type Platform = "meet" | "zoom";
+
 export interface MeetingSummary {
   id: string;
   org_id: string;
   title: string;
   status: MeetingStatus;
   meet_url: string | null;
+  platform: Platform;
   invite_code: string | null;
   scheduled_at: string | null;
   started_at: string | null;

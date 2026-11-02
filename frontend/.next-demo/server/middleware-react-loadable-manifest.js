@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST="{\"components/PdfViewer.tsx -> pdfjs-dist\":{\"id\":\"components/PdfViewer.tsx -> pdfjs-dist\",\"files\":[\"static/chunks/_app-pages-browser_node_modules_pdfjs-dist_build_pdf_js.js\"]},\"lib/auth.ts -> ./api\":{\"id\":\"lib/auth.ts -> ./api\",\"files\":[]}}"

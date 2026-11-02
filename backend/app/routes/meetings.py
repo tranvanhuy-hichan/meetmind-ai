@@ -7,8 +7,11 @@ from pydantic import BaseModel, Field
 
 from app.container import Container
 from app.deps import current_user, get_container
+from adapters.meet.zoom import sdk_signature
+from core.errors import Invalid
 from core.languages import LANGUAGES
 from core.models import Meeting, Participant, User
+from core.platforms import zoom_meeting_number
 from core.services.documents import document_view
 
 router = APIRouter(prefix="/api/meetings", tags=["meetings"])
@@ -18,6 +21,7 @@ class CreateBody(BaseModel):
     org_id: str
     title: str
     meet_url: str | None = None
+    platform: str | None = None
     scheduled_at: datetime | None = None
 
 
@@ -49,6 +53,7 @@ def meeting_view(meeting: Meeting, role: str) -> dict:
         "title": meeting.title,
         "status": meeting.status,
         "meet_url": meeting.meet_url,
+        "platform": meeting.platform,
         "invite_code": meeting.invite_code if can_manage else None,
         "scheduled_at": meeting.scheduled_at,
         "started_at": meeting.started_at,
@@ -69,7 +74,7 @@ async def list_meetings(user: User = Depends(current_user), c: Container = Depen
 
 @router.post("")
 async def create_meeting(body: CreateBody, user: User = Depends(current_user), c: Container = Depends(get_container)) -> dict:
-    meeting = await c.meetings.create(user.id, body.org_id, body.title, body.meet_url, body.scheduled_at)
+    meeting = await c.meetings.create(user.id, body.org_id, body.title, body.meet_url, body.scheduled_at, body.platform)
     return meeting_view(meeting, "host")
 
 
@@ -102,6 +107,25 @@ async def update_meeting(meeting_id: str, body: UpdateBody, user: User = Depends
     await c.meetings.set_meet_url(meeting_id, user.id, body.meet_url)
     actor = await c.access.member(meeting_id, user.id)
     return meeting_view(await c.access.meeting(meeting_id), actor.role.value)
+
+
+@router.get("/{meeting_id}/zoom-sdk")
+async def zoom_sdk(meeting_id: str, user: User = Depends(current_user), c: Container = Depends(get_container)) -> dict:
+    """What the browser needs to put a Zoom meeting inside the room page."""
+    await c.access.member(meeting_id, user.id)
+    meeting = await c.access.meeting(meeting_id)
+    number = zoom_meeting_number(meeting.meet_url) if meeting.platform == "zoom" else None
+    if number is None:
+        raise Invalid("Phiên họp này chưa có link Zoom hợp lệ để nhúng")
+    if not (c.settings.zoom_client_id and c.settings.zoom_client_secret):
+        raise Invalid("Chưa cấu hình Zoom (cần ZOOM_CLIENT_ID và ZOOM_CLIENT_SECRET)")
+    return {
+        "sdk_key": c.settings.zoom_client_id,
+        "signature": sdk_signature(c.settings.zoom_client_id, c.settings.zoom_client_secret, number),
+        "meeting_number": number,
+        "password": meeting.zoom_password or "",
+        "user_name": user.name,
+    }
 
 
 @router.post("/{meeting_id}/start", status_code=202)
@@ -153,4 +177,5 @@ async def public_config(c: Container = Depends(get_container)) -> dict:
         "google_client_id": c.settings.google_client_id or None,
         "email_code": c.auth.email_code_enabled,
         "meet_rooms": c.meet_rooms is not None,
+        "zoom_rooms": c.zoom_rooms is not None,
     }

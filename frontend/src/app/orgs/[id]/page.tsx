@@ -9,7 +9,7 @@ import { avatarClass, IconCaption, IconDoc, IconPlus, IconUsers, IconVideo, init
 import { InviteBox } from "@/components/InviteBox";
 import { isLive, MeetingTable } from "@/components/MeetingTable";
 import { Shell } from "@/components/Shell";
-import { api } from "@/lib/api";
+import { api, NO_ROOMS } from "@/lib/api";
 import { useRequireUser } from "@/lib/auth";
 import { dateShort, dateTime } from "@/lib/format";
 import type { MeetingSummary, OrgDetail, OrgRole, OrgSummary } from "@/lib/types";
@@ -38,7 +38,7 @@ function OrgView({ id }: { id: string }) {
   const [org, setOrg] = useState<OrgDetail | null>(null);
   const [meetings, setMeetings] = useState<MeetingSummary[] | null>(null);
   const [allOrgs, setAllOrgs] = useState<OrgSummary[]>([]);
-  const [meetRooms, setMeetRooms] = useState(false);
+  const [meetRooms, setMeetRooms] = useState(NO_ROOMS);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [dialog, setDialog] = useState<"invite" | "meeting" | null>(null);
@@ -57,7 +57,7 @@ function OrgView({ id }: { id: string }) {
     load();
     api.listMeetings().then(setMeetings).catch(() => setMeetings([]));
     api.listOrgs().then(setAllOrgs).catch(() => {});
-    api.config().then((c) => setMeetRooms(c.meet_rooms)).catch(() => {});
+    api.config().then((c) => setMeetRooms({ meet: c.meet_rooms, zoom: c.zoom_rooms })).catch(() => {});
   }, [user, load]);
 
   async function act(action: () => Promise<unknown>) {

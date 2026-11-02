@@ -100,6 +100,8 @@ class Meeting:
     owner_id: str
     invite_code: str
     meet_url: str | None = None
+    platform: str = "meet"
+    zoom_password: str | None = None
     status: str = MeetingStatus.CREATED.value
     scheduled_at: datetime | None = None
     started_at: datetime | None = None

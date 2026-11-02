@@ -5,7 +5,8 @@ serializer, the `updated_after` filter and how caption utterances are saved), an
 
 How it works: create a bot for the meeting URL, then poll the bot's transcript several times a second.
 For Google Meet, Attendee transcribes from the platform's own closed captions by default (no provider needed).
-Anything under `transcription_settings` in the config is passed on as is.
+Anything under `transcription_settings` in the config is passed on as is, and `bot_options` is merged into the
+request as well (for example `zoom_settings`).
 
 Streaming: Attendee rewrites a caption utterance in place while the person is still speaking (it uses
 update_or_create), so the same utterance is read many times with growing text. Every change is emitted at once as a
@@ -61,6 +62,7 @@ class AttendeeBot:
         poll_interval_s: float = 0.5,
         transcription_settings: dict[str, Any] | None = None,
         stable_s: float = 1.5,
+        bot_options: dict[str, Any] | None = None,
         state_every_s: float = 2.0,
         clock: Callable[[], float] = time.monotonic,
         client: httpx.AsyncClient | None = None,
@@ -68,6 +70,7 @@ class AttendeeBot:
         self._bot_name = bot_name
         self._poll = poll_interval_s
         self._transcription = transcription_settings
+        self._options = bot_options or {}
         self._stable = stable_s
         self._state_every = state_every_s
         self._clock = clock
@@ -79,7 +82,7 @@ class AttendeeBot:
         self._runs: dict[str, _Run] = {}
 
     async def join(self, meeting_id: str, meet_url: str) -> None:
-        body: dict[str, Any] = {"meeting_url": meet_url, "bot_name": self._bot_name}
+        body: dict[str, Any] = {**self._options, "meeting_url": meet_url, "bot_name": self._bot_name}
         if self._transcription:
             body["transcription_settings"] = self._transcription
         resp = await self._client.post("/api/v1/bots", json=body)

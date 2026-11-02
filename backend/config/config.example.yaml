@@ -11,6 +11,9 @@ bot:
     meeting_closed_captions:
       google_meet_language: vi-VN        # MỘT ngôn ngữ cho cả cuộc họp; người nói ngôn ngữ khác sẽ bị nhận sai
       merge_consecutive_captions: true   # nối các dòng phụ đề liền nhau của cùng một người
+  # zoom:                                # tùy chọn: ghi đè riêng cho cuộc họp Zoom. Bỏ trống thì Zoom dùng cùng cấu hình
+  #   transcription_settings:            # nhưng KHÔNG gửi transcription_settings của Meet (Attendee dùng Deepgram mặc định)
+  #     deepgram: {language: multi}
 
 asr:
   adapter: none                          # none | faster_whisper (needs: pip install '.[whisper]'); only used if the bot gives no transcript

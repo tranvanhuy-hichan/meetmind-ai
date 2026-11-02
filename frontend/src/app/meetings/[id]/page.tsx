@@ -5,15 +5,16 @@ import Link from "next/link";
 import { AppBar } from "@/components/AppBar";
 import { DocumentPane } from "@/components/DocumentPane";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
+import { ZoomEmbed } from "@/components/ZoomEmbed";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { Equalizer, IconBot, IconDoc, IconStop, IconUsers, IconVideo } from "@/components/Icons";
 import { useMeetingRoom } from "@/hooks/useMeetingRoom";
-import { api } from "@/lib/api";
+import { api, NO_ROOMS } from "@/lib/api";
 import { useRequireUser } from "@/lib/auth";
-import { canManage as canManageRole, STATUS_LABEL } from "@/lib/format";
+import { canManage as canManageRole, PLATFORM_LABEL, STATUS_LABEL } from "@/lib/format";
 import type { Language } from "@/lib/types";
 
-/** Opens Meet in its own window, on the left, so the room can sit beside it. */
+/** Opens the meeting (Meet or Zoom) in its own window, on the left, so the room can sit beside it. */
 function openMeet(url: string) {
   const width = Math.round(window.screen.availWidth * 0.55);
   const popup = window.open(url, "meetmind-meet", `popup=yes,width=${width},height=${window.screen.availHeight},left=0,top=0`);
@@ -27,6 +28,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const [side, setSide] = useState<"transcript" | "people">("transcript");
   const [busy, setBusy] = useState(false);
   const [sideW, setSideW] = useState(420);
+  const [stageTab, setStageTab] = useState<"zoom" | "docs">("zoom");
   const dragging = useRef(false);
 
   useEffect(() => {
@@ -56,13 +58,13 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     window.addEventListener("pointerup", up);
   }
   const [actionError, setActionError] = useState("");
-  const [meetRooms, setMeetRooms] = useState(false);
+  const [meetRooms, setMeetRooms] = useState(NO_ROOMS);
   const [roomNote, setRoomNote] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (user) {
       api.languages().then(setLanguages).catch(() => {});
-      api.config().then((c) => setMeetRooms(c.meet_rooms)).catch(() => {});
+      api.config().then((c) => setMeetRooms({ meet: c.meet_rooms, zoom: c.zoom_rooms })).catch(() => {});
     }
   }, [user]);
 
@@ -71,7 +73,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     const q = new URLSearchParams(window.location.search);
     const result = q.get("meet");
     if (!result) return;
-    setRoomNote(result === "ok" ? { ok: true, text: "Đã tạo phòng Google Meet cho phiên họp này. Link đã được lưu." } : { ok: false, text: q.get("msg") || "Không tạo được phòng Meet" });
+    setRoomNote(result === "ok" ? { ok: true, text: "Đã tạo phòng họp cho phiên này. Link đã được lưu." } : { ok: false, text: q.get("msg") || "Không tạo được phòng Meet" });
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
@@ -105,6 +107,8 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const live = room.status === "bot_joining" || room.status === "live";
   const canCallBot = room.status === "created" || room.status === "bot_failed";
   const meetUrl = room.detail.meeting.meet_url;
+  const hasZoom = meeting.platform === "zoom" && !!room.detail.meeting.meet_url;
+  const platformName = PLATFORM_LABEL[meeting.platform ?? "meet"];
   const showMinutes = room.hasMinutes || ["ended", "processing", "ready"].includes(room.status);
 
   async function run(action: () => Promise<unknown>) {
@@ -135,12 +139,12 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         )}
         <div className="grow" />
         {meetUrl && (
-          <button className="btn sm on-dark primary" onClick={() => openMeet(meetUrl)} title="Mở Meet ở cửa sổ riêng. Dùng Win + ←/→ để xếp hai cửa sổ cạnh nhau.">
-            <IconVideo />Mở Google Meet
+          <button className="btn sm on-dark primary" onClick={() => openMeet(meetUrl)} title={`Mở ${platformName} ở cửa sổ riêng. Dùng Win + ←/→ để xếp hai cửa sổ cạnh nhau.`}>
+            <IconVideo />Mở {platformName}
           </button>
         )}
         {manage && canCallBot && (
-          <button className="btn sm on-dark" disabled={busy || !meetUrl} title={meetUrl ? "Cho bot vào phòng Meet để lấy phụ đề" : "Cần nhập link Google Meet trước"} onClick={() => run(() => api.startMeeting(meeting.id))}>
+          <button className="btn sm on-dark" disabled={busy || !meetUrl} title={meetUrl ? `Cho bot vào phòng ${platformName} để lấy phụ đề` : `Cần nhập link ${platformName} trước`} onClick={() => run(() => api.startMeeting(meeting.id))}>
             <IconBot />Gọi bot vào họp
           </button>
         )}
@@ -178,6 +182,24 @@ export default function RoomPage({ params }: { params: { id: string } }) {
       </div>
 
       <div className="room-body" style={{ "--side-w": `${sideW}px` } as React.CSSProperties}>
+        <div className="stage">
+          {hasZoom && (
+            <div className="tabs stage-tabs" role="tablist">
+              <button role="tab" aria-selected={stageTab === "zoom"} className={`tab ${stageTab === "zoom" ? "active" : ""}`} onClick={() => setStageTab("zoom")}>
+                Zoom
+              </button>
+              <button role="tab" aria-selected={stageTab === "docs"} className={`tab ${stageTab === "docs" ? "active" : ""}`} onClick={() => setStageTab("docs")}>
+                Tài liệu{room.documents.length > 0 ? ` (${room.documents.length})` : ""}
+              </button>
+            </div>
+          )}
+          {hasZoom && meetUrl && (
+            // stays mounted while the documents tab is open, so the video does not drop out of the meeting
+            <section className="zoom-pane" hidden={stageTab !== "zoom"} aria-label="Cuộc họp Zoom">
+              <ZoomEmbed meetingId={meeting.id} url={meetUrl} />
+            </section>
+          )}
+          <div className="stage-docs" hidden={hasZoom && stageTab !== "docs"}>
         <DocumentPane
           meetingId={meeting.id}
           meId={me.user_id}
@@ -193,6 +215,8 @@ export default function RoomPage({ params }: { params: { id: string } }) {
           onMove={room.move}
           onDismissRequest={room.dismissRequest}
         />
+          </div>
+        </div>
 
         <div className="splitter" role="separator" aria-orientation="vertical" aria-label="Kéo để đổi kích thước" title="Kéo để đổi kích thước" onPointerDown={startResize} onDoubleClick={() => { setSideW(420); try { localStorage.removeItem("meetmind.sideW"); } catch {} }} />
 

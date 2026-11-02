@@ -27,6 +27,8 @@ export function fileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+export const PLATFORM_LABEL = { meet: "Google Meet", zoom: "Zoom" } as const;
+
 export const STATUS_LABEL: Record<MeetingStatus, string> = {
   created: "Chưa bắt đầu",
   bot_joining: "Đang kết nối bot",

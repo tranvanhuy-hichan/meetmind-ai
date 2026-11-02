@@ -4,6 +4,7 @@ import type {
   Language,
   MeetingDetail,
   MeetingSummary,
+  Platform,
   MinutesData,
   MinutesResponse,
   OrgDetail,
@@ -59,7 +60,12 @@ export interface AppConfig {
   google_client_id: string | null;
   email_code: boolean;
   meet_rooms: boolean;
+  zoom_rooms: boolean;
 }
+
+/** Which platforms MeetMind can create a room on by itself. */
+export type Rooms = Record<Platform, boolean>;
+export const NO_ROOMS: Rooms = { meet: false, zoom: false };
 
 export interface Session {
   token: string;
@@ -89,13 +95,15 @@ export const api = {
   googleLogin: (credential: string) => json<Session>("/api/auth/google", { method: "POST", ...body({ credential }) }),
 
   listMeetings: () => json<MeetingSummary[]>("/api/meetings"),
-  createMeeting: (org_id: string, title: string, meet_url: string | null, scheduled_at: string | null) =>
-    json<MeetingSummary>("/api/meetings", { method: "POST", ...body({ org_id, title, meet_url, scheduled_at }) }),
+  createMeeting: (org_id: string, title: string, meet_url: string | null, scheduled_at: string | null, platform: Platform = "meet") =>
+    json<MeetingSummary>("/api/meetings", { method: "POST", ...body({ org_id, title, meet_url, scheduled_at, platform }) }),
   inviteToMeeting: (id: string, emails: string[]) =>
     json<InviteResult>(`/api/meetings/${id}/invitations`, { method: "POST", ...body({ emails }) }),
   joinMeeting: (invite_code: string) =>
     json<MeetingSummary>("/api/meetings/join", { method: "POST", ...body({ invite_code }) }),
   getMeeting: (id: string) => json<MeetingDetail>(`/api/meetings/${id}`),
+  zoomSdk: (id: string) =>
+    json<{ sdk_key: string; signature: string; meeting_number: string; password: string; user_name: string }>(`/api/meetings/${id}/zoom-sdk`),
   setMeetUrl: (id: string, meet_url: string | null) =>
     json<MeetingSummary>(`/api/meetings/${id}`, { method: "PATCH", ...body({ meet_url }) }),
   createMeetRoom: (id: string) => json<{ authorize_url: string }>(`/api/meetings/${id}/meet-room`, { method: "POST" }),

@@ -2,26 +2,29 @@
 
 import { useState } from "react";
 import { Dialog } from "./Dialog";
-import { api } from "@/lib/api";
-import type { MeetingSummary, OrgSummary } from "@/lib/types";
+import { api, type Rooms } from "@/lib/api";
+import { PLATFORM_LABEL } from "@/lib/format";
+import type { MeetingSummary, OrgSummary, Platform } from "@/lib/types";
 
-export function CreateDialog({ orgs, initialOrg, meetRooms, onClose, onDone }: { orgs: OrgSummary[]; initialOrg: string; meetRooms: boolean; onClose: () => void; onDone: (m: MeetingSummary) => void }) {
+export function CreateDialog({ orgs, initialOrg, meetRooms, onClose, onDone }: { orgs: OrgSummary[]; initialOrg: string; meetRooms: Rooms; onClose: () => void; onDone: (m: MeetingSummary) => void }) {
   const [org, setOrg] = useState(orgs.some((o) => o.id === initialOrg) ? initialOrg : orgs[0]?.id ?? "");
   const [title, setTitle] = useState("");
+  const [platform, setPlatform] = useState<Platform>("meet");
   const [url, setUrl] = useState("");
   const [makeRoom, setMakeRoom] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const wantRoom = meetRooms && makeRoom && !url.trim();
+  const canMakeRoom = meetRooms[platform];
+  const wantRoom = canMakeRoom && makeRoom && !url.trim();
 
   async function submit() {
     setBusy(true);
     setError("");
     try {
-      const meeting = await api.createMeeting(org, title, url.trim() || null, null);
+      const meeting = await api.createMeeting(org, title, url.trim() || null, null, platform);
       if (wantRoom) {
         try {
-          window.location.href = (await api.createMeetRoom(meeting.id)).authorize_url; // Google asks once, then sends the user back to the room
+          window.location.href = (await api.createMeetRoom(meeting.id)).authorize_url; // Google or Zoom asks once, then sends the user back to the room
           return;
         } catch {
           /* could not start it: the meeting exists, the room page lets them try again */
@@ -59,13 +62,28 @@ export function CreateDialog({ orgs, initialOrg, meetRooms, onClose, onDone }: {
         <input id="t" className="input" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
       </div>
       <div className="field">
-        <label htmlFor="u">Link Google Meet</label>
-        <input id="u" className="input" placeholder="https://meet.google.com/abc-defg-hij" value={url} onChange={(e) => setUrl(e.target.value)} />
-        {meetRooms ? (
+        <label>Nền tảng họp</label>
+        <div className="row" style={{ gap: 16 }}>
+          {(["meet", "zoom"] as const).map((p) => (
+            <label key={p} className="row small" style={{ gap: 6 }}>
+              <input type="radio" name="platform" checked={platform === p} onChange={() => { setPlatform(p); setUrl(""); }} />
+              {PLATFORM_LABEL[p]}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="field">
+        <label htmlFor="u">Link {PLATFORM_LABEL[platform]}</label>
+        <input id="u" className="input" placeholder={platform === "zoom" ? "https://zoom.us/j/123456789" : "https://meet.google.com/abc-defg-hij"} value={url} onChange={(e) => setUrl(e.target.value)} />
+        {canMakeRoom ? (
           <label className="row small" style={{ gap: 8 }}>
             <input type="checkbox" checked={makeRoom} disabled={!!url.trim()} onChange={(e) => setMakeRoom(e.target.checked)} />
-            Để MeetMind tạo phòng Google Meet cho tôi (Google sẽ hỏi quyền một lần)
+            Để MeetMind tạo {platform === "zoom" ? "cuộc họp Zoom" : "phòng Google Meet"} cho tôi ({platform === "zoom" ? "Zoom" : "Google"} sẽ hỏi quyền một lần)
           </label>
+        ) : platform === "zoom" ? (
+          <span className="muted small">
+            Tạo cuộc họp trong Zoom rồi dán link mời vào đây. Có thể bổ sung sau; cần có link trước khi gọi bot vào họp.
+          </span>
         ) : (
           <span className="muted small">
             Tạo phòng ở <a href="https://meet.new" target="_blank" rel="noopener noreferrer">meet.new</a> rồi dán link vào đây. Có thể bổ sung sau; cần có link trước khi gọi bot vào họp.

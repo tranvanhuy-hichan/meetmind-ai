@@ -6,7 +6,7 @@ from dataclasses import fields
 from datetime import datetime, timezone
 from typing import Any, TypeVar
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, delete, select, update
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, delete, inspect, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -78,6 +78,8 @@ class MeetingRow(Base):
     owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     invite_code: Mapped[str] = mapped_column(String(16), unique=True, index=True)
     meet_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    platform: Mapped[str] = mapped_column(String(12), default="meet", server_default="meet")
+    zoom_password: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(24), default="created")
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -145,6 +147,15 @@ def _to(cls: type[T], row: Any, **extra: Any) -> T:
     return cls(**values)
 
 
+def _add_missing_columns(conn) -> None:
+    """`create_all` leaves existing tables alone, so a column added later is added here for databases made before it."""
+    have = {c["name"] for c in inspect(conn).get_columns("meetings")}
+    if "platform" not in have:
+        conn.execute(text("ALTER TABLE meetings ADD COLUMN platform VARCHAR(12) NOT NULL DEFAULT 'meet'"))
+    if "zoom_password" not in have:
+        conn.execute(text("ALTER TABLE meetings ADD COLUMN zoom_password VARCHAR(64)"))
+
+
 class SqlRepository:
     def __init__(self, url: str):
         self._engine = create_async_engine(url)
@@ -153,6 +164,7 @@ class SqlRepository:
     async def create_schema(self) -> None:
         async with self._engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(_add_missing_columns)
 
     async def drop_schema(self) -> None:
         """Removes every table. For tests and local resets only."""
@@ -302,13 +314,14 @@ class SqlRepository:
         return _to(m.User, row) if row else None
 
     # meetings
-    async def create_meeting(self, org_id: str, owner_id: str, title: str, meet_url: str | None, scheduled_at) -> m.Meeting:
+    async def create_meeting(self, org_id: str, owner_id: str, title: str, meet_url: str | None, scheduled_at, platform: str = "meet") -> m.Meeting:
         row = await self._add(
             MeetingRow(
                 org_id=org_id,
                 owner_id=owner_id,
                 title=title,
                 meet_url=meet_url,
+                platform=platform,
                 scheduled_at=scheduled_at,
                 invite_code=secrets.token_hex(4).upper(),
             )

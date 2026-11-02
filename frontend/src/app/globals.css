@@ -2152,13 +2152,15 @@ body.resizing canvas {
 }
 
 /* side pane: underline tabs and one slim row for "who is speaking" + language */
-.side-pane .tabs {
+.side-pane .tabs,
+.stage-tabs {
   gap: 20px;
   padding: 0 16px;
   background: #fff;
   overflow: visible;
 }
-.side-pane .tab {
+.side-pane .tab,
+.stage-tabs .tab {
   height: 44px;
   padding: 0 2px;
   border-radius: 0;
@@ -2167,10 +2169,12 @@ body.resizing canvas {
   color: var(--muted);
   font-weight: 650;
 }
-.side-pane .tab:hover {
+.side-pane .tab:hover,
+.stage-tabs .tab:hover {
   color: var(--ink);
 }
-.side-pane .tab.active {
+.side-pane .tab.active,
+.stage-tabs .tab.active {
   background: transparent;
   color: var(--violet);
   border-bottom-color: var(--violet);
@@ -2317,5 +2321,71 @@ body.resizing canvas {
   }
   .minutes-page .split {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Zoom inside the room: the left column is two tabs, Zoom or documents ---------- */
+.stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.stage-tabs {
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+.stage-docs,
+.zoom-pane {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.stage-docs[hidden],
+.zoom-pane[hidden] {
+  display: none;
+}
+.stage-docs {
+  display: flex;
+  flex-direction: column;
+}
+.stage-docs > .docs-pane {
+  flex: 1 1 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.zoom-pane {
+  display: flex;
+  flex-direction: column;
+  background: #111;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.zoom-embed {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+}
+.zoom-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.zoom-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 16px;
+  color: #ddd;
+  background: rgba(17, 17, 17, 0.85);
+}
+@media (max-width: 900px) {
+  .stage-docs,
+  .zoom-pane {
+    flex: none;
+    height: 70vh;
   }
 }

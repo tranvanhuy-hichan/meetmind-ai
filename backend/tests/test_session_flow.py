@@ -109,3 +109,38 @@ def test_access_rules(client, make_user, make_org):
     with pytest.raises(Exception):
         with client.websocket_connect(f"/ws/meetings/{mid}?token={outsider.token}"):
             pass
+
+
+def test_meeting_platform(client, make_user, make_org):
+    host = make_user("plat@example.com", "Chủ trì")
+    org = make_org(host)
+
+    def create(**extra):
+        return client.post("/api/meetings", json={"org_id": org, "title": "Họp", **extra}, headers=host.headers)
+
+    assert create(meet_url="https://meet.google.com/abc-defg-hij").json()["platform"] == "meet"
+    assert create().json()["platform"] == "meet"  # default
+    zoom = create(platform="zoom", meet_url="https://us02web.zoom.us/j/123456789?pwd=x")
+    assert zoom.status_code == 200 and zoom.json()["platform"] == "zoom"
+    assert create(meet_url="https://us02web.zoom.us/j/1").json()["platform"] == "zoom"  # taken from the link
+
+    wrong = create(platform="zoom", meet_url="https://meet.google.com/abc-defg-hij")
+    assert wrong.status_code >= 400 and "Zoom" in wrong.text
+    assert create(platform="teams").status_code >= 400
+
+    # the link of an existing meeting has to match its platform too
+    mid = zoom.json()["id"]
+    bad = client.patch(f"/api/meetings/{mid}", json={"meet_url": "https://meet.google.com/abc-defg-hij"}, headers=host.headers)
+    assert bad.status_code >= 400
+    ok = client.patch(f"/api/meetings/{mid}", json={"meet_url": "https://zoom.us/j/987654321"}, headers=host.headers)
+    assert ok.status_code == 200 and ok.json()["meet_url"] == "https://zoom.us/j/987654321"
+
+
+def test_zoom_sdk_details(client, make_user, make_org):
+    host = make_user("sdk@example.com", "Chủ trì")
+    org = make_org(host)
+    zoom = client.post("/api/meetings", json={"org_id": org, "title": "Họp", "platform": "zoom", "meet_url": "https://us02web.zoom.us/j/84315220467?pwd=x"}, headers=host.headers).json()
+    meet = client.post("/api/meetings", json={"org_id": org, "title": "Họp"}, headers=host.headers).json()
+    # Zoom is not configured in tests, and a Meet meeting has nothing to embed
+    assert client.get(f"/api/meetings/{zoom['id']}/zoom-sdk", headers=host.headers).status_code >= 400
+    assert client.get(f"/api/meetings/{meet['id']}/zoom-sdk", headers=host.headers).status_code >= 400

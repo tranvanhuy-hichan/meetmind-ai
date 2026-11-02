@@ -6,7 +6,7 @@ import { CreateDialog, JoinDialog } from "@/components/dialogs";
 import { IconPlus } from "@/components/Icons";
 import { MeetingTable } from "@/components/MeetingTable";
 import { Shell } from "@/components/Shell";
-import { api } from "@/lib/api";
+import { api, NO_ROOMS } from "@/lib/api";
 import { useRequireUser } from "@/lib/auth";
 import type { MeetingSummary, OrgSummary } from "@/lib/types";
 
@@ -18,7 +18,7 @@ export default function MeetingsPage() {
   const [meetings, setMeetings] = useState<MeetingSummary[] | null>(null);
   const [orgs, setOrgs] = useState<OrgSummary[] | null>(null);
   const [orgId, setOrgId] = useState("");
-  const [meetRooms, setMeetRooms] = useState(false);
+  const [meetRooms, setMeetRooms] = useState(NO_ROOMS);
   const [dialog, setDialog] = useState<"create" | "join" | null>(null);
 
   const load = useCallback(() => {
@@ -29,7 +29,7 @@ export default function MeetingsPage() {
   useEffect(() => {
     if (!user) return;
     load();
-    api.config().then((c) => setMeetRooms(c.meet_rooms)).catch(() => {});
+    api.config().then((c) => setMeetRooms({ meet: c.meet_rooms, zoom: c.zoom_rooms })).catch(() => {});
     try {
       setOrgId(localStorage.getItem(FILTER_KEY) ?? "");
     } catch {

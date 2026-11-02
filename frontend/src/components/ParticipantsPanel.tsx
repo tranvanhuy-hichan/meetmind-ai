@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { api } from "@/lib/api";
+import { api, type Rooms } from "@/lib/api";
 import { InviteBox } from "./InviteBox";
 import { avatarClass, initials } from "./Icons";
-import { ROLE_LABEL } from "@/lib/format";
+import { PLATFORM_LABEL, ROLE_LABEL } from "@/lib/format";
 import type { MeetingSummary, Participant, PresenterRef } from "@/lib/types";
 
 interface Props {
@@ -17,11 +17,13 @@ interface Props {
   presenter: PresenterRef | null;
   onChanged: () => void;
   onMeetUrl: (url: string | null) => Promise<unknown>;
-  meetRooms: boolean;
+  meetRooms: Rooms;
   speaking?: string[];
 }
 
 export function ParticipantsPanel({ meeting, meId, isHost, canManage, participants, online, presenter, onChanged, onMeetUrl, meetRooms, speaking = [] }: Props) {
+  const isZoom = meeting.platform === "zoom";
+  const platformName = PLATFORM_LABEL[meeting.platform ?? "meet"];
   const [url, setUrl] = useState(meeting.meet_url ?? "");
   const [urlState, setUrlState] = useState<"idle" | "saving" | "saved" | string>("idle");
   const [copied, setCopied] = useState(false);
@@ -86,19 +88,19 @@ export function ParticipantsPanel({ meeting, meId, isHost, canManage, participan
           </div>
         )}
         <div className="field">
-          <label htmlFor="meet-url">Link Google Meet</label>
+          <label htmlFor="meet-url">Link {platformName}</label>
           {canManage ? (
             <>
               <div className="row">
-                <input id="meet-url" className="input" placeholder="https://meet.google.com/…" value={url} onChange={(e) => { setUrl(e.target.value); setUrlState("idle"); }} />
+                <input id="meet-url" className="input" placeholder={isZoom ? "https://zoom.us/j/…" : "https://meet.google.com/…"} value={url} onChange={(e) => { setUrl(e.target.value); setUrlState("idle"); }} />
                 <button className="btn sm" disabled={urlState === "saving" || url === (meeting.meet_url ?? "")} onClick={saveUrl}>Lưu</button>
               </div>
-              {meetRooms ? (
+              {meetRooms[meeting.platform ?? "meet"] ? (
                 <button type="button" className="btn sm" disabled={roomBusy} onClick={createRoom}>
-                  {roomBusy ? "Đang mở Google…" : meeting.meet_url ? "Tạo phòng Meet mới" : "Tạo phòng Meet tự động"}
+                  {roomBusy ? (isZoom ? "Đang mở Zoom…" : "Đang mở Google…") : meeting.meet_url ? `Tạo ${isZoom ? "cuộc họp Zoom" : "phòng Meet"} mới` : `Tạo ${isZoom ? "cuộc họp Zoom" : "phòng Meet"} tự động`}
                 </button>
               ) : (
-                !meeting.meet_url && <a href="https://meet.new" target="_blank" rel="noopener noreferrer" className="small">Tạo phòng Google Meet mới (mở tab mới)</a>
+                !isZoom && !meeting.meet_url && <a href="https://meet.new" target="_blank" rel="noopener noreferrer" className="small">Tạo phòng Google Meet mới (mở tab mới)</a>
               )}
               {roomError && <span className="error">{roomError}</span>}
               {urlState === "saved" && <span className="muted small">Đã lưu.</span>}

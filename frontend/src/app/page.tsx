@@ -7,7 +7,7 @@ import { CreateDialog, JoinDialog, OrgDialog } from "@/components/dialogs";
 import { avatarClass, IconBuilding, IconCaption, IconDoc, IconPlus, IconVideo, initials } from "@/components/Icons";
 import { isLive, MeetingTable } from "@/components/MeetingTable";
 import { Shell } from "@/components/Shell";
-import { api } from "@/lib/api";
+import { api, NO_ROOMS } from "@/lib/api";
 import { useRequireUser } from "@/lib/auth";
 import { dateShort } from "@/lib/format";
 import type { MeetingSummary, OrgSummary } from "@/lib/types";
@@ -24,7 +24,7 @@ export default function HomePage() {
   const [meetings, setMeetings] = useState<MeetingSummary[] | null>(null);
   const [orgs, setOrgs] = useState<OrgSummary[] | null>(null);
   const [demo, setDemo] = useState(false);
-  const [meetRooms, setMeetRooms] = useState(false);
+  const [meetRooms, setMeetRooms] = useState(NO_ROOMS);
   const [hello, setHello] = useState("Xin chào"); // the time of day is only known in the browser
   const [dialog, setDialog] = useState<"create" | "join" | "org" | null>(null);
 
@@ -37,7 +37,7 @@ export default function HomePage() {
     if (!user) return;
     setHello(greeting(new Date().getHours()));
     load();
-    api.config().then((c) => { setDemo(c.demo); setMeetRooms(c.meet_rooms); }).catch(() => {});
+    api.config().then((c) => { setDemo(c.demo); setMeetRooms({ meet: c.meet_rooms, zoom: c.zoom_rooms }); }).catch(() => {});
   }, [user, load]);
 
   const all = meetings ?? [];

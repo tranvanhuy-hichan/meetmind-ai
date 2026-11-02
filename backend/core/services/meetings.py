@@ -5,6 +5,7 @@ from datetime import datetime
 
 from core.errors import Invalid, NotFound, PermissionDenied
 from core.languages import LANGUAGES
+from core.platforms import LABEL, check_url, detect_platform, validate_platform
 from core.models import Meeting, MeetingStatus, Participant, Role
 from core.ports import EventBus, Repository
 from core.services.access import AccessService
@@ -14,15 +15,6 @@ from core.services.live_pipeline import LivePipeline
 from core.services.mail import meeting_invite_mail
 from core.services.orgs import MAX_INVITES_AT_ONCE, login_link
 from core.services.topics import meeting_topic
-
-
-def _check_url(url: str | None) -> str | None:
-    url = (url or "").strip()
-    if not url:
-        return None
-    if not url.startswith("https://"):
-        raise Invalid("Link cuộc họp phải bắt đầu bằng https://")
-    return url
 
 
 def validate_lang(lang: str | None) -> str | None:
@@ -51,14 +43,23 @@ class MeetingService:
         self._app_url = app_url
 
     async def create(
-        self, owner_id: str, org_id: str, title: str, meet_url: str | None, scheduled_at: datetime | None
+        self,
+        owner_id: str,
+        org_id: str,
+        title: str,
+        meet_url: str | None,
+        scheduled_at: datetime | None,
+        platform: str | None = None,
     ) -> Meeting:
         title = title.strip()
         if not title:
             raise Invalid("Tên phiên họp không được để trống")
         if await self._repo.get_org_member(org_id, owner_id) is None:
             raise PermissionDenied("Bạn không thuộc tổ chức này")
-        meeting = await self._repo.create_meeting(org_id, owner_id, title, _check_url(meet_url), scheduled_at)
+        platform = validate_platform(platform or detect_platform(meet_url))
+        meeting = await self._repo.create_meeting(
+            org_id, owner_id, title, check_url(meet_url, platform), scheduled_at, platform
+        )
         await self._repo.add_participant(meeting.id, owner_id, Role.HOST.value, None)
         return meeting
 
@@ -102,13 +103,14 @@ class MeetingService:
 
     async def set_meet_url(self, meeting_id: str, user_id: str, meet_url: str | None) -> None:
         await self._access.manager(meeting_id, user_id)
-        await self._repo.update_meeting(meeting_id, meet_url=_check_url(meet_url))
+        meeting = await self._access.meeting(meeting_id)
+        await self._repo.update_meeting(meeting_id, meet_url=check_url(meet_url, meeting.platform))
 
     async def start(self, meeting_id: str, user_id: str) -> None:
         await self._access.manager(meeting_id, user_id)
         meeting = await self._access.meeting(meeting_id)
         if not meeting.meet_url:
-            raise Invalid("Chưa có link Google Meet cho phiên họp này")
+            raise Invalid(f"Chưa có link {LABEL.get(meeting.platform, 'cuộc họp')} cho phiên họp này")
         if meeting.status in (MeetingStatus.BOT_JOINING.value, MeetingStatus.LIVE.value):
             raise Invalid("Phiên họp đang diễn ra")
         await self._pipeline.start(meeting_id, meeting.meet_url)
