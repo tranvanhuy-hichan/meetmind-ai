@@ -46,6 +46,21 @@ make up         # dựng tất cả: Ollama, bot Attendee, backend, giao diện
 `make up` còn cần các khóa của Google và Zoom nếu bạn muốn đăng nhập Google, tạo phòng tự động và nhúng Zoom. Lấy chúng ở đâu, điền vào đâu: **[docs/SETUP.md](docs/SETUP.md)** (mục 3 đến 6).
 Lệnh `make` liệt kê mọi lệnh con. Compose chỉ chạy backend và giao diện; MinIO, PostgreSQL và Ollama là của máy bạn. Backend chạy ở mạng của máy chủ (`network_mode: host`, chỉ Linux).
 
+### Họp trên Zoom
+
+Một app Zoom (loại **General app**, User-managed) phục vụ cả ba việc: tạo cuộc họp từ MeetMind (OAuth), nhúng video vào phòng (Meeting SDK) và cho bot Attendee vào họp. Chỉ có **một cặp Client ID và Client Secret**.
+
+1. Tạo app ở https://marketplace.zoom.us/user/build, lấy **Client ID** và **Client Secret** ở Basic information.
+2. Bật **Meeting SDK** (Features → Embed) và thêm scope tạo cuộc họp (`meeting:write:meeting`).
+3. Khai **OAuth redirect URL** và **OAuth allow lists** là `https://<hostname-api>/api/zoom/callback`. Zoom **không nhận `http://localhost`**, nên cần địa chỉ `https://` (Cloudflare Tunnel, bên dưới).
+4. Điền `.env`: `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`, `ZOOM_REDIRECT_URI`; chạy `docker compose up -d backend`.
+5. `make attendee-zoom` để bot Attendee biết khóa Zoom (chạy lại mỗi khi đổi secret).
+
+Dùng: tạo phiên, chọn **Zoom**, để trống link rồi bấm **Tạo phiên** (hoặc dán link họp có sẵn của tài khoản Zoom chủ app); tab **Zoom** trong phòng tự vào họp; bấm **Gọi bot vào họp** để có phụ đề.
+Từng bước kèm hình dạng trang Zoom, bảng khóa và lỗi thường gặp: [docs/SETUP.md](docs/SETUP.md) mục 4 (Zoom), 5 (Cloudflare), 6 (bảng khóa), 10 (lỗi thường gặp).
+
+Cần biết: app Zoom chưa duyệt chỉ dùng được với **họp của tài khoản Zoom chủ app** (xem "Ai dùng được hệ thống" bên dưới); phụ đề Zoom lấy từ caption có sẵn của Zoom và cần bật phụ đề trong họp; người dùng vào họp nhúng với vai **người tham gia thường** (chưa có quyền host, nên có thể chưa chia sẻ được màn hình).
+
 ### Địa chỉ công khai (Cloudflare Tunnel)
 
 Zoom chỉ nhận địa chỉ callback dạng `https://`. Khi chạy trên máy, dùng Cloudflare Tunnel để có địa chỉ `https://` cố định về `localhost`
