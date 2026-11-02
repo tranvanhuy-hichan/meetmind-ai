@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { api, type Rooms } from "@/lib/api";
 import { InviteBox } from "./InviteBox";
-import { avatarClass, initials } from "./Icons";
+import { avatarClass, IconCheck, IconCopy, IconEdit, IconExternal, initials } from "./Icons";
 import { PLATFORM_LABEL, ROLE_LABEL } from "@/lib/format";
 import type { MeetingSummary, Participant, PresenterRef } from "@/lib/types";
 
@@ -62,59 +62,113 @@ export function ParticipantsPanel({ meeting, meId, isHost, canManage, participan
     }
   }
 
+  const platformKey = meeting.platform ?? "meet";
+  const canCreate = meetRooms[platformKey];
+  const hasLink = !!meeting.meet_url;
+  const [editing, setEditing] = useState(!hasLink && canManage);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  async function copyLink() {
+    if (!meeting.meet_url) return;
+    try {
+      await navigator.clipboard.writeText(meeting.meet_url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    } catch {
+      /* clipboard blocked: the link is still visible to copy by hand */
+    }
+  }
+
+  async function save() {
+    await saveUrl();
+    setEditing(false);
+  }
+
   return (
-    <div style={{ overflowY: "auto", minHeight: 0 }}>
-      <div className="col" style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-        {canManage && meeting.invite_code && (
-          <div className="field">
-            <label>Mã tham gia (dự phòng, không cần khi mời bằng email)</label>
-            <div className="row">
-              <code className="num grow" style={{ fontSize: 16, letterSpacing: "0.08em" }}>{meeting.invite_code}</code>
-              <button className="btn sm" onClick={copyCode}>{copied ? "Đã chép" : "Sao chép"}</button>
+    <div className="pp">
+      <section className="pp-section">
+        <div className="pp-title">
+          <span>Link {platformName}</span>
+          {urlState === "saved" && <span className="pp-ok"><IconCheck size={13} />Đã lưu</span>}
+        </div>
+
+        {editing && canManage ? (
+          <div className="col" style={{ gap: 8 }}>
+            <input
+              id="meet-url"
+              className="input"
+              autoFocus
+              placeholder={isZoom ? "https://zoom.us/j/…" : "https://meet.google.com/…"}
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); setUrlState("idle"); }}
+              onKeyDown={(e) => { if (e.key === "Enter") save(); }}
+            />
+            <div className="row" style={{ gap: 8 }}>
+              <button className="btn sm primary" disabled={urlState === "saving" || url === (meeting.meet_url ?? "")} onClick={save}>Lưu</button>
+              {hasLink && <button className="btn sm" onClick={() => { setUrl(meeting.meet_url ?? ""); setEditing(false); setUrlState("idle"); }}>Hủy</button>}
             </div>
           </div>
+        ) : hasLink ? (
+          <div className="pp-link">
+            <span className="pp-link-text truncate" title={meeting.meet_url ?? ""}>{meeting.meet_url}</span>
+            <button className="pp-icon" onClick={copyLink} title="Chép link" aria-label="Chép link">
+              {linkCopied ? <IconCheck size={15} /> : <IconCopy size={15} />}
+            </button>
+            <a className="pp-icon" href={meeting.meet_url ?? "#"} target="_blank" rel="noopener noreferrer" title={`Mở ${platformName}`} aria-label={`Mở ${platformName}`}>
+              <IconExternal size={15} />
+            </a>
+            {canManage && (
+              <button className="pp-icon" onClick={() => setEditing(true)} title="Sửa link" aria-label="Sửa link">
+                <IconEdit size={15} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="muted small">Chưa có link{canManage ? "" : "; chủ trì sẽ thêm"}</div>
         )}
+
         {canManage && (
-          <div className="field">
-            <label>Mời tham gia bằng email</label>
-            <InviteBox
-              placeholder="ten@congty.com"
-              onInvite={async (emails) => {
-                const res = await api.inviteToMeeting(meeting.id, emails);
-                onChanged();
-                return res;
-              }}
-            />
+          <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+            {canCreate ? (
+              <button type="button" className="btn sm" disabled={roomBusy} onClick={createRoom}>
+                {roomBusy ? (isZoom ? "Đang mở Zoom…" : "Đang mở Google…") : hasLink ? `Tạo ${isZoom ? "cuộc họp Zoom" : "phòng Meet"} mới` : `Tạo ${isZoom ? "cuộc họp Zoom" : "phòng Meet"} tự động`}
+              </button>
+            ) : (
+              !isZoom && !hasLink && <a href="https://meet.new" target="_blank" rel="noopener noreferrer" className="small">Tạo phòng Google Meet mới (mở tab mới)</a>
+            )}
           </div>
         )}
-        <div className="field">
-          <label htmlFor="meet-url">Link {platformName}</label>
-          {canManage ? (
-            <>
-              <div className="row">
-                <input id="meet-url" className="input" placeholder={isZoom ? "https://zoom.us/j/…" : "https://meet.google.com/…"} value={url} onChange={(e) => { setUrl(e.target.value); setUrlState("idle"); }} />
-                <button className="btn sm" disabled={urlState === "saving" || url === (meeting.meet_url ?? "")} onClick={saveUrl}>Lưu</button>
-              </div>
-              {meetRooms[meeting.platform ?? "meet"] ? (
-                <button type="button" className="btn sm" disabled={roomBusy} onClick={createRoom}>
-                  {roomBusy ? (isZoom ? "Đang mở Zoom…" : "Đang mở Google…") : meeting.meet_url ? `Tạo ${isZoom ? "cuộc họp Zoom" : "phòng Meet"} mới` : `Tạo ${isZoom ? "cuộc họp Zoom" : "phòng Meet"} tự động`}
-                </button>
-              ) : (
-                !isZoom && !meeting.meet_url && <a href="https://meet.new" target="_blank" rel="noopener noreferrer" className="small">Tạo phòng Google Meet mới (mở tab mới)</a>
-              )}
-              {roomError && <span className="error">{roomError}</span>}
-              {urlState === "saved" && <span className="muted small">Đã lưu.</span>}
-              {urlState !== "idle" && urlState !== "saved" && urlState !== "saving" && <span className="error">{urlState}</span>}
-            </>
-          ) : (
-            <span className="truncate">{meeting.meet_url ?? "Chưa có"}</span>
-          )}
-        </div>
-      </div>
+        {roomError && <span className="error small">{roomError}</span>}
+        {urlState !== "idle" && urlState !== "saved" && urlState !== "saving" && <span className="error small">{urlState}</span>}
+      </section>
 
-      <div className="panel-head" style={{ borderTop: "1px solid var(--border)" }}>
-        <h3 className="grow">Người tham gia ({participants.length})</h3>
-        <span className="muted small">{online.size} đang trực tuyến</span>
+      {canManage && (
+        <section className="pp-section">
+          <div className="pp-title">
+            <span>Mời tham gia</span>
+            {meeting.invite_code && (
+              <button className="pp-code" onClick={copyCode} title="Mã tham gia dự phòng, không cần khi mời bằng email. Bấm để chép">
+                <span className="muted">Mã</span>
+                <code className="num">{meeting.invite_code}</code>
+                {copied ? <IconCheck size={13} /> : <IconCopy size={13} />}
+              </button>
+            )}
+          </div>
+          <InviteBox
+            compact
+            placeholder="Email người cần mời"
+            onInvite={async (emails) => {
+              const res = await api.inviteToMeeting(meeting.id, emails);
+              onChanged();
+              return res;
+            }}
+          />
+        </section>
+      )}
+
+      <div className="pp-title pp-people-head">
+        <span>Người tham gia ({participants.length})</span>
+        <span className="pp-online"><span className="dot on" />{online.size} trực tuyến</span>
       </div>
       {participants.map((p) => (
         <div className="person" key={p.user_id}>

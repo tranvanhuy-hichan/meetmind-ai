@@ -826,11 +826,14 @@ textarea {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 48px;
-  padding: 6px 14px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 14px;
   background: var(--card);
   border-bottom: 1px solid var(--line);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 .present-bar {
   flex: 0 0 auto;
@@ -2164,8 +2167,8 @@ body.resizing canvas {
 }
 @media (max-width: 900px) {
   .roomhead {
-    flex-wrap: wrap;
-    padding: 8px 12px;
+    flex-wrap: nowrap;
+    padding: 0 10px;
   }
 }
 
@@ -3015,28 +3018,39 @@ body.resizing canvas {
 
 @media (max-width: 900px) {
   .roomhead {
-    flex-wrap: wrap;
-    padding: 8px 12px;
+    flex-wrap: nowrap !important;
+    padding: 0 10px;
     gap: 8px;
+    height: 48px;
+    min-height: 48px;
   }
   .roomhead .rh-back,
   .roomhead .rh-sep {
     display: none;
   }
   .roomhead .rh-title {
-    max-width: 180px;
+    max-width: 140px;
+    font-size: 14px;
+  }
+  .roomhead .status {
+    padding: 2px 7px;
+    font-size: 11px;
+  }
+  .roomhead .avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
   }
   .room-nav-actions {
-    width: 100%;
-    overflow-x: auto;
-    white-space: nowrap;
-    padding-top: 6px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
   }
-  .room-nav-actions::-webkit-scrollbar {
-    display: none;
+  .room-nav-actions .btn {
+    height: 30px;
+    padding: 0 8px;
+    font-size: 12px;
   }
 
   .mobile-room-tab-bar {
@@ -3227,4 +3241,235 @@ body.resizing canvas {
   background: var(--violet);
   margin-top: 6px;
   flex-shrink: 0;
+}
+
+/* ---------- Meeting room on a phone: no cards around the panes, and a header that keeps the meeting title ---------- */
+@media (max-width: 900px) {
+  .room {
+    background: #fff;
+  }
+
+  /* two rows: logo, title, status and avatar on top; the action buttons on their own row below */
+  .roomhead {
+    position: static !important;
+    flex-wrap: wrap !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 8px 12px 10px !important;
+    gap: 8px 10px !important;
+  }
+  .roomhead .rh-logo {
+    order: 0;
+  }
+  .roomhead .rh-main {
+    order: 1;
+    flex: 1 1 0 !important;
+    min-width: 0;
+  }
+  .roomhead .rh-main .rh-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: none !important;
+    font-size: 15px !important;
+  }
+  .roomhead .grow {
+    display: none;
+  }
+  .roomhead .avatar {
+    order: 2;
+    margin-left: 0 !important;
+  }
+  .roomhead .room-nav-actions {
+    order: 3;
+    flex: 1 1 100% !important;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .roomhead .room-nav-actions::-webkit-scrollbar {
+    display: none;
+  }
+  .roomhead .room-nav-actions .btn {
+    flex: 1 0 auto;
+    justify-content: center;
+    height: 34px !important;
+  }
+
+  /* the header scrolls away, the tab strip stays at the top */
+  .mobile-room-tab-bar {
+    top: 0 !important;
+  }
+
+  /* panes fill the screen: no outer margin, border, radius or shadow */
+  .room-body {
+    padding: 0 !important;
+    gap: 0 !important;
+    background: #fff;
+  }
+  .stage,
+  .side-pane,
+  .docs-pane,
+  .zoom-pane {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  .stage-tabs {
+    border: 0 !important;
+    border-bottom: 1px solid var(--line) !important;
+    border-radius: 0 !important;
+  }
+  .stage,
+  .side-pane {
+    height: calc(100dvh - 42px) !important;
+  }
+}
+
+/* ---------- Phone: no frames around lists; meetings are flat rows separated by lines ---------- */
+@media (max-width: 680px) {
+  .zshell .content {
+    background: #fff;
+  }
+  .zshell .content .card,
+  .zshell .content .panel {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .table-toolbar {
+    padding: 0 0 12px;
+    border-bottom: 0;
+  }
+
+  .mobile-meeting-cards {
+    gap: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    border-top: 1px solid var(--line);
+  }
+  .mobile-meeting-card {
+    padding: 14px 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .mobile-meeting-card:active {
+    transform: none;
+    background: var(--violet-soft);
+  }
+  .mobile-meeting-card.live {
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-left: 3px solid #22c55e;
+    padding-left: 12px;
+    background: #f0fdf4;
+    box-shadow: none;
+  }
+}
+
+/* ---------- "Người tham gia" tab: link, invite and people as three plain sections ---------- */
+.pp {
+  overflow-y: auto;
+  min-height: 0;
+}
+.pp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.pp-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pp-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #15803d;
+}
+.pp-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.pp-link-text {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+.pp-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: none;
+}
+.pp-icon:hover {
+  background: var(--violet-soft);
+  color: var(--violet);
+  text-decoration: none;
+}
+.pp-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+.pp-code code {
+  letter-spacing: 0.06em;
+}
+.pp-code:hover {
+  border-color: var(--violet);
+  color: var(--violet);
+}
+.pp-people-head {
+  padding: 14px 16px 6px;
+}
+.pp-online {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.pp .person {
+  padding: 10px 16px;
 }

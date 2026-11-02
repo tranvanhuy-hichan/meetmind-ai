@@ -209,39 +209,77 @@ export function DocumentPane(props: Props) {
                 )}
               </>
             ) : (
-              <span className="muted">Chưa mở tài liệu nào</span>
+              <span className="muted small truncate">
+                Chưa mở tài liệu{!presenter ? " · Chưa có người trình bày" : ""}
+              </span>
             )}
             <div className="grow" />
 
-            {!presenter && <span className="muted small">Chưa có người trình bày</span>}
-            {!isPresenter && presenter && <span className="muted">{following_ ? `Đang theo dõi ${presenter.name}` : `${presenter.name} đang trình bày`}</span>}
-            <div className="grow" />
+            {presenter && !isPresenter && (
+              <span className="muted small truncate" style={{ marginRight: 6 }}>
+                {following_ ? `Đang theo dõi ${presenter.name}` : `${presenter.name} đang trình bày`}
+              </span>
+            )}
+
             {isPresenter && (
-              <>
+              <div className="row" style={{ gap: 6, flexShrink: 0 }}>
                 {others.length > 0 && (
-                  <select className="select" style={{ height: 26 }} value="" aria-label="Trao quyền trình bày" onChange={(e) => e.target.value && props.onGrant(e.target.value)}>
+                  <select
+                    className="select sm"
+                    style={{ height: 28 }}
+                    value=""
+                    aria-label="Trao quyền trình bày"
+                    onChange={(e) => e.target.value && props.onGrant(e.target.value)}
+                  >
                     <option value="">Trao quyền cho…</option>
-                    {others.map((p) => <option key={p.user_id} value={p.user_id}>{p.name}</option>)}
+                    {others.map((p) => (
+                      <option key={p.user_id} value={p.user_id}>
+                        {p.name}
+                      </option>
+                    ))}
                   </select>
                 )}
-                <button className="btn sm" onClick={props.onRelease}>Dừng trình bày</button>
-              </>
+                <button className="btn sm" onClick={props.onRelease} style={{ whiteSpace: "nowrap" }}>
+                  Dừng trình bày
+                </button>
+              </div>
             )}
+
             {!isPresenter && presenter && (
-              <>
+              <div className="row" style={{ gap: 6, flexShrink: 0 }}>
                 {following_ ? (
                   <>
-                    <button className="btn sm" onClick={backToMyPlace}>Về chỗ đọc của tôi</button>
-                    <button className="btn sm" onClick={leaveFollow}>Tự đọc</button>
+                    <button className="btn sm" onClick={backToMyPlace} style={{ whiteSpace: "nowrap" }}>
+                      Về chỗ đọc
+                    </button>
+                    <button className="btn sm" onClick={leaveFollow} style={{ whiteSpace: "nowrap" }}>
+                      Tự đọc
+                    </button>
                   </>
                 ) : (
-                  <button className="btn sm primary" onClick={startFollow}>Theo dõi {presenter.name}</button>
+                  <button className="btn sm primary" onClick={startFollow} style={{ whiteSpace: "nowrap" }}>
+                    Theo dõi
+                  </button>
                 )}
-                <button className="btn sm" onClick={props.onClaim}>{canManage ? "Tiếp quản" : "Xin trình bày"}</button>
-              </>
+                <button className="btn sm" onClick={props.onClaim} style={{ whiteSpace: "nowrap" }}>
+                  {canManage ? "Tiếp quản" : "Xin trình bày"}
+                </button>
+              </div>
             )}
-            {!presenter && <button className="btn sm" onClick={props.onClaim} disabled={!activeDoc}><IconPresent />Trình bày cho mọi người</button>}
-                    </div>
+
+            {!presenter && (
+              <button
+                className="btn sm"
+                onClick={props.onClaim}
+                disabled={!activeDoc}
+                title={!activeDoc ? "Chọn một tài liệu để bắt đầu trình bày" : "Trình bày cho mọi người"}
+                style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+              >
+                <IconPresent size={14} />
+                <span>Trình bày</span>
+              </button>
+            )}
+          </div>
 
           {activeDoc && view ? (
             <PdfViewer

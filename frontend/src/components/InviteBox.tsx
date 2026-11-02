@@ -15,10 +15,12 @@ interface Props {
   /** Role choices; omit when the invitation has a single fixed role. */
   roles?: { value: string; label: string }[];
   placeholder?: string;
+  /** One line: an input and a button, for tight places. */
+  compact?: boolean;
 }
 
 /** Invite people by email. Whoever has no account yet gets access at their first sign-in. */
-export function InviteBox({ onInvite, roles, placeholder = "ten@congty.com, ten2@congty.com" }: Props) {
+export function InviteBox({ onInvite, roles, placeholder = "ten@congty.com, ten2@congty.com", compact = false }: Props) {
   const [text, setText] = useState("");
   const [role, setRole] = useState(roles?.[0]?.value ?? "member");
   const [busy, setBusy] = useState(false);
@@ -43,15 +45,37 @@ export function InviteBox({ onInvite, roles, placeholder = "ten@congty.com, ten2
 
   return (
     <div className="col" style={{ gap: 8 }}>
-      <textarea
-        className="textarea"
-        rows={3}
-        value={text}
-        placeholder={placeholder}
-        aria-label="Địa chỉ email cần mời"
-        onChange={(e) => setText(e.target.value)}
-      />
-      <div className="row">
+      {compact ? (
+        <form
+          className="row"
+          style={{ gap: 8 }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <input
+            className="input grow"
+            value={text}
+            placeholder={placeholder}
+            aria-label="Địa chỉ email cần mời"
+            onChange={(e) => setText(e.target.value)}
+          />
+          <button className="btn primary" disabled={busy || parseEmails(text).length === 0}>
+            {busy ? "Đang gửi…" : "Mời"}
+          </button>
+        </form>
+      ) : (
+        <textarea
+          className="textarea"
+          rows={3}
+          value={text}
+          placeholder={placeholder}
+          aria-label="Địa chỉ email cần mời"
+          onChange={(e) => setText(e.target.value)}
+        />
+      )}
+      <div className="row" style={compact ? { display: "none" } : undefined}>
         {roles && (
           <select className="select" value={role} onChange={(e) => setRole(e.target.value)} aria-label="Vai trò">
             {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}

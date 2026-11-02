@@ -104,7 +104,9 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const live = room.status === "bot_joining" || room.status === "live";
   const canCallBot = room.status === "created" || room.status === "bot_failed";
   const meetUrl = room.detail.meeting.meet_url;
-  const hasZoom = meeting.platform === "zoom" && !!room.detail.meeting.meet_url;
+  // a finished meeting has nothing left to join: no embedded Zoom, just the documents
+  const meetingOver = ["ended", "processing", "ready"].includes(room.status);
+  const hasZoom = meeting.platform === "zoom" && !!room.detail.meeting.meet_url && !meetingOver;
   const platformName = PLATFORM_LABEL[meeting.platform ?? "meet"];
   const showMinutes = room.hasMinutes || ["ended", "processing", "ready"].includes(room.status);
 
@@ -123,32 +125,38 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   return (
     <div className="room">
       <AppBar user={user} onLogout={logout}>
-        <strong className="rh-title truncate">{meeting.title}</strong>
-        <span className={`status ${room.status}`}>{STATUS_LABEL[room.status]}</span>
-        <span className="muted small row" style={{ gap: 5 }} title="Số người đang mở phiên họp này">
-          <IconUsers size={14} />
-          {room.online.size} trực tuyến
-        </span>
-        {room.speaking.length > 0 && (
-          <span className="speaking-chip" title="Đang nói">
-            <Equalizer />
-            <span className="truncate">{room.speaking.join(", ")}</span>
+        <div className="rh-main" style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "0 1 auto" }}>
+          <strong className="rh-title truncate" style={{ fontSize: 15, maxWidth: 160 }}>
+            {meeting.title}
+          </strong>
+          <span className={`status ${room.status}`} style={{ flexShrink: 0 }}>
+            {live && <span className="live-dot" />}
+            {STATUS_LABEL[room.status]}
           </span>
-        )}
+        </div>
+
         <div className="grow" />
-        <div className="room-nav-actions">
+
+        <div className="room-nav-actions" style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
           {meetUrl && (
             <button
               className="btn sm on-dark primary"
               onClick={() => openMeet(meetUrl)}
-              title={`Mở ${platformName} ở cửa sổ riêng.`}
+              title={`Mở ${platformName}`}
+              style={{ height: 32, padding: "0 10px", fontSize: 12.5, whiteSpace: "nowrap" }}
             >
-              <IconVideo size={14} /> Mở {platformName}
+              <IconVideo size={14} />
+              <span>{meeting.platform === "zoom" ? "Zoom" : "Meet"}</span>
             </button>
           )}
           {showMinutes && (
-            <Link className="btn sm on-dark" href={`/meetings/${meeting.id}/minutes`}>
-              <IconDoc size={14} /> Biên bản
+            <Link
+              className="btn sm on-dark"
+              href={`/meetings/${meeting.id}/minutes`}
+              style={{ height: 32, padding: "0 10px", fontSize: 12.5, whiteSpace: "nowrap" }}
+            >
+              <IconDoc size={14} />
+              <span>Biên bản</span>
             </Link>
           )}
           {manage && canCallBot && (
@@ -156,8 +164,10 @@ export default function RoomPage({ params }: { params: { id: string } }) {
               className="btn sm on-dark"
               disabled={busy || !meetUrl}
               onClick={() => run(() => api.startMeeting(meeting.id))}
+              style={{ height: 32, padding: "0 10px", fontSize: 12.5, whiteSpace: "nowrap" }}
             >
-              <IconBot size={14} /> Gọi bot
+              <IconBot size={14} />
+              <span>Bot</span>
             </button>
           )}
           {manage && live && (
@@ -167,8 +177,10 @@ export default function RoomPage({ params }: { params: { id: string } }) {
               onClick={() =>
                 window.confirm("Kết thúc cuộc họp và tạo biên bản?") && run(() => api.endMeeting(meeting.id))
               }
+              style={{ height: 32, padding: "0 10px", fontSize: 12.5, whiteSpace: "nowrap" }}
             >
-              <IconStop size={14} /> Kết thúc
+              <IconStop size={14} />
+              <span>Kết thúc</span>
             </button>
           )}
         </div>

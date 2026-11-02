@@ -12,7 +12,9 @@ import {
   IconDoc,
   IconPlus,
   IconSearch,
+  IconSparkles,
   IconTranslate,
+  IconUsers,
   IconVideo,
   initials,
 } from "@/components/Icons";
@@ -131,16 +133,22 @@ export default function HomePage() {
       <div className="topline">
         <div className="topline-greeting">
           <h1>
-            {hello}, {firstName || "bạn"} 👋
+            {hello}, {firstName || "bạn"}
+            <IconSparkles size={18} style={{ color: "var(--violet)", display: "inline-block", verticalAlign: "middle", marginLeft: 8 }} />
           </h1>
           <p style={{ marginTop: 4 }}>
-            {orgs === null || meetings === null
-              ? "Đang đồng bộ dữ liệu cuộc họp…"
-              : noOrg
-              ? "Tạo một tổ chức để bắt đầu các phiên họp AI."
-              : live.length
-              ? `🔴 ${live.length} phiên họp đang diễn ra ngay lúc này.`
-              : "Chưa có phiên nào đang diễn ra · Trợ lý AI sẵn sàng hỗ trợ."}
+            {orgs === null || meetings === null ? (
+              "Đang đồng bộ dữ liệu cuộc họp…"
+            ) : noOrg ? (
+              "Tạo một tổ chức để bắt đầu các phiên họp AI."
+            ) : live.length ? (
+              <>
+                <span className="live-dot" style={{ display: "inline-block", marginRight: 6 }} />
+                <b>{live.length}</b> phiên họp đang diễn ra ngay lúc này.
+              </>
+            ) : (
+              "Chưa có phiên nào đang diễn ra · Trợ lý AI sẵn sàng hỗ trợ."
+            )}
           </p>
         </div>
         <div className="topline-actions">
@@ -192,8 +200,9 @@ export default function HomePage() {
               </span>
             </div>
           </div>
-          <Link href={`/meetings/${live[0].id}`} className="btn primary" style={{ whiteSpace: "nowrap" }}>
-            Vào phòng ngay 🔴
+          <Link href={`/meetings/${live[0].id}`} className="btn primary" style={{ whiteSpace: "nowrap", gap: 6 }}>
+            <IconVideo size={15} />
+            <span>Vào phòng ngay</span>
           </Link>
         </div>
       )}
@@ -329,14 +338,31 @@ export default function HomePage() {
                         <span className={`tag ${o.role !== "member" ? "accent" : ""}`}>{ROLE[o.role]}</span>
                       </div>
                       <div className="org-compact-metrics">
-                        <span>
-                          👥 <b className="num">{o.member_count}</b> thành viên
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          <IconUsers size={14} style={{ color: "var(--brand)" }} />
+                          <span>
+                            <b className="num">{o.member_count}</b> thành viên
+                          </span>
                         </span>
-                        <span>
-                          📹 <b className="num">{mine.length}</b> phiên
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          <IconVideo size={14} style={{ color: "var(--brand)" }} />
+                          <span>
+                            <b className="num">{mine.length}</b> phiên
+                          </span>
                         </span>
                         {liveCount > 0 && (
-                          <span style={{ color: "var(--ok)", fontWeight: 700 }}>🔴 {liveCount} đang họp</span>
+                          <span
+                            style={{
+                              color: "var(--ok)",
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                            }}
+                          >
+                            <span className="live-dot" />
+                            <span>{liveCount} đang họp</span>
+                          </span>
                         )}
                       </div>
                     </Link>

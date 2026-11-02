@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CreateDialog } from "@/components/dialogs";
 import { Dialog } from "@/components/Dialog";
-import { avatarClass, IconCaption, IconDoc, IconPlus, IconSearch, IconUsers, IconVideo, initials } from "@/components/Icons";
+import { avatarClass, IconCaption, IconDoc, IconMail, IconPlus, IconSearch, IconUsers, IconVideo, initials } from "@/components/Icons";
 import { InviteBox } from "@/components/InviteBox";
 import { isLive, MeetingTable } from "@/components/MeetingTable";
 import { Shell } from "@/components/Shell";
@@ -274,8 +274,8 @@ function OrgView({ id }: { id: string }) {
                   </div>
                   {org.pending.length === 0 ? (
                     <div style={{ padding: "32px 20px", textAlign: "center", color: "var(--muted)" }}>
-                      <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 24, opacity: 0.6 }}>✉️</span>
+                      <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                        <IconMail size={28} style={{ opacity: 0.5, color: "var(--muted)" }} />
                         <strong style={{ fontSize: 14 }}>Không có lời mời nào đang chờ</strong>
                         <span className="small muted" style={{ maxWidth: 360 }}>
                           Người được mời sẽ tự động tham gia tổ chức khi đăng nhập bằng đúng địa chỉ email đã mời.

@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import type { LucideProps } from "lucide-react";
 import {
   FileText,
   Upload,
@@ -24,6 +25,11 @@ import {
   Menu,
   ChevronRight,
   ArrowRight,
+  Mail,
+  Inbox,
+  Copy,
+  ExternalLink,
+  Pencil,
 } from "lucide-react";
 
 export {
@@ -51,85 +57,53 @@ export {
   Menu,
   ChevronRight,
   ArrowRight,
+  Mail,
+  Inbox,
 };
 
-interface IconProps {
+export interface IconProps {
   size?: number;
   className?: string;
+  style?: CSSProperties;
 }
 
-export const IconDoc = ({ size = 18, className = "" }: IconProps) => (
-  <FileText className={`icon ${className}`.trim()} size={size} />
-);
-export const IconUpload = ({ size = 18, className = "" }: IconProps) => (
-  <Upload className={`icon ${className}`.trim()} size={size} />
-);
-export const IconDownload = ({ size = 18, className = "" }: IconProps) => (
-  <Download className={`icon ${className}`.trim()} size={size} />
-);
-export const IconPlus = ({ size = 18, className = "" }: IconProps) => (
-  <Plus className={`icon ${className}`.trim()} size={size} />
-);
-export const IconMinus = ({ size = 18, className = "" }: IconProps) => (
-  <Minus className={`icon ${className}`.trim()} size={size} />
-);
-export const IconClose = ({ size = 18, className = "" }: IconProps) => (
-  <X className={`icon ${className}`.trim()} size={size} />
-);
-export const IconTrash = ({ size = 18, className = "" }: IconProps) => (
-  <Trash2 className={`icon ${className}`.trim()} size={size} />
-);
-export const IconPresent = ({ size = 18, className = "" }: IconProps) => (
-  <Presentation className={`icon ${className}`.trim()} size={size} />
-);
-export const IconUsers = ({ size = 18, className = "" }: IconProps) => (
-  <Users className={`icon ${className}`.trim()} size={size} />
-);
-export const IconVideo = ({ size = 18, className = "" }: IconProps) => (
-  <Video className={`icon ${className}`.trim()} size={size} />
-);
-export const IconBot = ({ size = 18, className = "" }: IconProps) => (
-  <Bot className={`icon ${className}`.trim()} size={size} />
-);
-export const IconStop = ({ size = 18, className = "" }: IconProps) => (
-  <Square className={`icon ${className}`.trim()} size={size} />
-);
-export const IconFile = ({ size = 18, className = "" }: IconProps) => (
-  <File className={`icon ${className}`.trim()} size={size} />
-);
-export const IconCheck = ({ size = 18, className = "" }: IconProps) => (
-  <Check className={`icon ${className}`.trim()} size={size} />
-);
-export const IconCaption = ({ size = 18, className = "" }: IconProps) => (
-  <Subtitles className={`icon ${className}`.trim()} size={size} />
-);
-export const IconBuilding = ({ size = 18, className = "" }: IconProps) => (
-  <Building2 className={`icon ${className}`.trim()} size={size} />
-);
-export const IconTranslate = ({ size = 18, className = "" }: IconProps) => (
-  <Languages className={`icon ${className}`.trim()} size={size} />
-);
-export const IconSearch = ({ size = 18, className = "" }: IconProps) => (
-  <Search className={`icon ${className}`.trim()} size={size} />
-);
-export const IconHome = ({ size = 18, className = "" }: IconProps) => (
-  <Home className={`icon ${className}`.trim()} size={size} />
-);
-export const IconSparkles = ({ size = 18, className = "" }: IconProps) => (
-  <Sparkles className={`icon ${className}`.trim()} size={size} />
-);
-export const IconClock = ({ size = 18, className = "" }: IconProps) => (
-  <Clock className={`icon ${className}`.trim()} size={size} />
-);
-export const IconMenu = ({ size = 20, className = "" }: IconProps) => (
-  <Menu className={`icon ${className}`.trim()} size={size} />
-);
-export const IconChevronRight = ({ size = 16, className = "" }: IconProps) => (
-  <ChevronRight className={`icon ${className}`.trim()} size={size} />
-);
-export const IconArrowRight = ({ size = 16, className = "" }: IconProps) => (
-  <ArrowRight className={`icon ${className}`.trim()} size={size} />
-);
+const wrapIcon = (Component: React.ComponentType<LucideProps>, defaultSize = 18) => {
+  const IconComp = ({ size = defaultSize, className = "", style, ...props }: IconProps) => (
+    <Component className={`icon ${className}`.trim()} size={size} style={style} {...props} />
+  );
+  IconComp.displayName = `Icon(${Component.displayName || Component.name || "Lucide"})`;
+  return IconComp;
+};
+
+export const IconDoc = wrapIcon(FileText);
+export const IconUpload = wrapIcon(Upload);
+export const IconDownload = wrapIcon(Download);
+export const IconPlus = wrapIcon(Plus);
+export const IconMinus = wrapIcon(Minus);
+export const IconClose = wrapIcon(X);
+export const IconTrash = wrapIcon(Trash2);
+export const IconPresent = wrapIcon(Presentation);
+export const IconUsers = wrapIcon(Users);
+export const IconVideo = wrapIcon(Video);
+export const IconBot = wrapIcon(Bot);
+export const IconStop = wrapIcon(Square);
+export const IconFile = wrapIcon(File);
+export const IconCheck = wrapIcon(Check);
+export const IconCaption = wrapIcon(Subtitles);
+export const IconBuilding = wrapIcon(Building2);
+export const IconTranslate = wrapIcon(Languages);
+export const IconSearch = wrapIcon(Search);
+export const IconHome = wrapIcon(Home);
+export const IconSparkles = wrapIcon(Sparkles);
+export const IconClock = wrapIcon(Clock);
+export const IconMenu = wrapIcon(Menu, 20);
+export const IconChevronRight = wrapIcon(ChevronRight, 16);
+export const IconArrowRight = wrapIcon(ArrowRight, 16);
+export const IconMail = wrapIcon(Mail);
+export const IconInbox = wrapIcon(Inbox);
+export const IconCopy = wrapIcon(Copy);
+export const IconExternal = wrapIcon(ExternalLink);
+export const IconEdit = wrapIcon(Pencil);
 
 export const IconMeetMark = () => (
   <svg className="brand-mark" viewBox="0 0 24 24" aria-hidden="true">

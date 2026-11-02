@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { avatarClass, IconVideo } from "./Icons";
+import { avatarClass, IconChevronRight, IconInbox, IconVideo } from "./Icons";
 import { dateTime, PLATFORM_LABEL, ROLE_LABEL, STATUS_LABEL } from "@/lib/format";
 import type { MeetingSummary } from "@/lib/types";
 import { MeetingTableSkeleton } from "./Skeleton";
@@ -26,7 +26,7 @@ export function MeetingTable({ meetings, orgName, empty = "Chưa có phiên họ
     return (
       <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--muted)" }}>
         <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 28, opacity: 0.6 }}>☕</span>
+          <IconInbox size={32} style={{ opacity: 0.4, color: "var(--muted)" }} />
           <span style={{ fontSize: 13.5 }}>{empty}</span>
         </div>
       </div>
@@ -117,9 +117,19 @@ export function MeetingTable({ meetings, orgName, empty = "Chưa có phiên họ
               <Link
                 href={`/meetings/${m.id}`}
                 className={`btn-open-mobile ${isLive(m) ? "primary" : ""}`}
-                style={{ flexShrink: 0 }}
+                style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4 }}
               >
-                {isLive(m) ? "Vào ngay 🔴" : "Mở ›"}
+                {isLive(m) ? (
+                  <>
+                    <span>Vào ngay</span>
+                    <span className="live-dot" />
+                  </>
+                ) : (
+                  <>
+                    <span>Mở</span>
+                    <IconChevronRight size={13} />
+                  </>
+                )}
               </Link>
             </div>
           </div>

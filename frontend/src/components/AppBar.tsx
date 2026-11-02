@@ -10,15 +10,23 @@ interface Props {
   children?: React.ReactNode;
 }
 
-/** Header of the meeting room: logo > Phiên họp > title, then whatever the page puts in it. */
+/** Simple 1-row header for the meeting room. */
 export function AppBar({ user, children }: Props) {
   return (
     <header className="roomhead">
-      <Link href="/" className="rh-logo" title="Về trang chủ"><IconMeetMark /></Link>
-      <Link href="/meetings" className="rh-back">Phiên họp</Link>
-      <span className="rh-sep" aria-hidden>›</span>
+      <Link href="/" className="rh-logo" title="Về trang chủ">
+        <IconMeetMark />
+      </Link>
       {children}
-      {user && <span className="avatar" style={{ marginLeft: "auto" }} title={`${user.name} · ${user.email}`}>{initials(user.name)}</span>}
+      {user && (
+        <span
+          className="avatar sm"
+          style={{ flexShrink: 0, marginLeft: 4 }}
+          title={`${user.name} · ${user.email}`}
+        >
+          {initials(user.name)}
+        </span>
+      )}
     </header>
   );
 }
