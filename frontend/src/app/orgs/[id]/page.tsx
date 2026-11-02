@@ -9,6 +9,7 @@ import { avatarClass, IconCaption, IconDoc, IconPlus, IconUsers, IconVideo, init
 import { InviteBox } from "@/components/InviteBox";
 import { isLive, MeetingTable } from "@/components/MeetingTable";
 import { Shell } from "@/components/Shell";
+import { OrgDetailSkeleton } from "@/components/Skeleton";
 import { api, NO_ROOMS } from "@/lib/api";
 import { useRequireUser } from "@/lib/auth";
 import { dateShort, dateTime } from "@/lib/format";
@@ -72,7 +73,6 @@ function OrgView({ id }: { id: string }) {
 
   const mine = useMemo(() => (meetings ?? []).filter((m) => m.org_id === id), [meetings, id]);
 
-  if (!user) return null;
   const manage = org?.role === "owner" || org?.role === "admin";
   const isOwner = org?.role === "owner";
   const inviteRoles = isOwner
@@ -81,7 +81,6 @@ function OrgView({ id }: { id: string }) {
 
   return (
     <Shell user={user} onLogout={logout}>
-
       {error && (
         <div className="card" style={{ padding: 28, marginTop: 14 }}>
           <h1>Không mở được tổ chức</h1>
@@ -90,17 +89,40 @@ function OrgView({ id }: { id: string }) {
         </div>
       )}
 
+      {!org && !error && <OrgDetailSkeleton />}
+
       {org && (
         <>
-          <div className="topline" style={{ marginTop: 10, marginBottom: 6 }}>
-            <span className={`avatar lg ${avatarClass(org.name)}`}>{initials(org.name)}</span>
-            <div className="grow">
-              <h1>{org.name}</h1>
-              <p>{org.members.length} thành viên · {mine.length} phiên họp · tạo ngày {dateShort(org.created_at)}</p>
+          <div className="topline" style={{ marginTop: 10, marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
+              <span className={`avatar lg ${avatarClass(org.name)}`} style={{ flexShrink: 0 }}>
+                {initials(org.name)}
+              </span>
+              <div className="grow truncate">
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <h1 className="truncate" style={{ fontSize: 22 }}>
+                    {org.name}
+                  </h1>
+                  <span className={`tag ${manage ? "accent" : ""}`}>{ROLE_LABEL[org.role]}</span>
+                </div>
+                <p style={{ marginTop: 2 }}>
+                  {org.members.length} thành viên · {mine.length} phiên họp · tạo ngày {dateShort(org.created_at)}
+                </p>
+              </div>
             </div>
-            <span className={`tag ${manage ? "accent" : ""}`}>{ROLE_LABEL[org.role]}</span>
-            {manage && <button className="btn" onClick={() => setDialog("invite")}><IconUsers />Mời thành viên</button>}
-            <button className="btn primary" onClick={() => setDialog("meeting")}><IconPlus />Tạo phiên họp</button>
+
+            <div className="topline-actions">
+              {manage && (
+                <button className="btn" onClick={() => setDialog("invite")}>
+                  <IconUsers size={16} />
+                  Mời thành viên
+                </button>
+              )}
+              <button className="btn primary" onClick={() => setDialog("meeting")}>
+                <IconPlus size={16} />
+                Tạo phiên họp
+              </button>
+            </div>
           </div>
 
           <div className="page-tabs" role="tablist">
@@ -169,7 +191,7 @@ function OrgView({ id }: { id: string }) {
                 {org.members
                   .filter((m) => !search.trim() || `${m.name} ${m.email}`.toLowerCase().includes(search.trim().toLowerCase()))
                   .map((m) => {
-                    const self = m.user_id === user.id;
+                    const self = user ? m.user_id === user.id : false;
                     const canRemove = self || (manage && (isOwner || m.role === "member"));
                     return (
                       <div className="member-row" key={m.user_id}>
@@ -229,7 +251,7 @@ function OrgView({ id }: { id: string }) {
             </section>
           )}
 
-          {tab === "settings" && <Settings org={org} manage={manage} onRenamed={load} onLeave={() => act(async () => { await api.removeOrgMember(org.id, user.id); router.push("/"); })} />}
+          {tab === "settings" && <Settings org={org} manage={manage} onRenamed={load} onLeave={() => act(async () => { if (user) { await api.removeOrgMember(org.id, user.id); } router.push("/"); })} />}
         </>
       )}
 

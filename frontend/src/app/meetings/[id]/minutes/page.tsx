@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AppBar } from "@/components/AppBar";
 import { avatarClass, IconCheck, IconDoc, IconPlus, IconUsers, initials } from "@/components/Icons";
+import { MinutesSkeleton } from "@/components/Skeleton";
 import { TranscriptList } from "@/components/TranscriptPanel";
 import { api } from "@/lib/api";
 import { useRequireUser } from "@/lib/auth";
@@ -25,6 +26,7 @@ export default function MinutesPage({ params }: { params: { id: string } }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const poll = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const loadTranscript = useCallback(
@@ -34,19 +36,22 @@ export default function MinutesPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     if (!user) return;
-    api.getMeeting(params.id).then(setDetail).catch((e) => setError(e.message));
-    api.languages().then(setLanguages).catch(() => {});
-    api
-      .getMinutes(params.id)
-      .then((m) => {
-        if (m) {
-          setMinutes(m.minutes);
-          setStatus(m.status);
-          setUpdatedAt(m.updated_at);
-        }
-      })
-      .catch((e) => setError(e.message));
-    loadTranscript(null).catch(() => {});
+    Promise.all([
+      api.getMeeting(params.id).then(setDetail).catch((e) => setError(e.message)),
+      api.languages().then(setLanguages).catch(() => {}),
+      api
+        .getMinutes(params.id)
+        .then((m) => {
+          if (m) {
+            setMinutes(m.minutes);
+            setStatus(m.status);
+            setUpdatedAt(m.updated_at);
+          }
+        })
+        .catch((e) => setError(e.message)),
+      loadTranscript(null).catch(() => {}),
+    ]).finally(() => setLoading(false));
+
     return () => clearInterval(poll.current);
   }, [user, params.id, loadTranscript]);
 
@@ -163,7 +168,9 @@ export default function MinutesPage({ params }: { params: { id: string } }) {
       <div className="mn-body">
       {error && <div className="notice warn bordered" style={{ marginBottom: 14 }}>{error}</div>}
 
-      {tab === "minutes" && !minutes && (
+      {loading && <MinutesSkeleton />}
+
+      {!loading && tab === "minutes" && !minutes && (
         <div className="card" style={{ padding: 40, textAlign: "center" }}>
           <div className="avatar av-0" style={{ width: 56, height: 56, borderRadius: 18, margin: "0 auto 14px" }}><IconDoc /></div>
           <h2>Chưa có biên bản</h2>
@@ -174,7 +181,7 @@ export default function MinutesPage({ params }: { params: { id: string } }) {
         </div>
       )}
 
-      {tab === "minutes" && minutes && (
+      {!loading && tab === "minutes" && minutes && (
         <div className="split">
           <div>
             <section className="card min-section summary-card">

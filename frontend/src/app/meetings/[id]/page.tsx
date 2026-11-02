@@ -8,6 +8,7 @@ import { ParticipantsPanel } from "@/components/ParticipantsPanel";
 import { ZoomEmbed } from "@/components/ZoomEmbed";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { Equalizer, IconBot, IconDoc, IconStop, IconUsers, IconVideo } from "@/components/Icons";
+import { RoomSkeleton } from "@/components/Skeleton";
 import { useMeetingRoom } from "@/hooks/useMeetingRoom";
 import { api, NO_ROOMS } from "@/lib/api";
 import { useRequireUser } from "@/lib/auth";
@@ -93,12 +94,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     );
   }
   if (!room.detail) {
-    return (
-      <>
-        <AppBar user={user} onLogout={logout} />
-        <main className="page muted">Đang mở phiên họp…</main>
-      </>
-    );
+    return <RoomSkeleton />;
   }
 
   const { meeting, me } = room.detail;
