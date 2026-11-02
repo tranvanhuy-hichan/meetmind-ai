@@ -89,15 +89,15 @@ export function MeetingTable({ meetings, orgName, empty = "Chưa có phiên họ
         </table>
       </div>
 
-      {/* Mobile Card-Row View (Aligned 2-row layout, never wraps jaggedly) */}
+      {/* Mobile Card-Row View (Clean, elevated cards, straight rows) */}
       <div className="mobile-meeting-cards">
         {rows.map((m) => (
           <div key={m.id} className={`mobile-meeting-card ${isLive(m) ? "live" : ""}`}>
-            {/* Row 1: Avatar + Title + Status */}
+            {/* Row 1: Icon + Title (left) & Status badge (right) */}
             <div className="mobile-mc-top">
               <Link href={`/meetings/${m.id}`} className="mobile-mc-title-group">
                 <span className={`avatar sm ${avatarClass(m.title)}`} style={{ flexShrink: 0 }}>
-                  <IconVideo size={13} />
+                  <IconVideo size={14} />
                 </span>
                 <span className="mobile-mc-title truncate">{m.title}</span>
               </Link>
@@ -107,19 +107,19 @@ export function MeetingTable({ meetings, orgName, empty = "Chưa có phiên họ
               </span>
             </div>
 
-            {/* Row 2: Metadata (Platform, Org, Time) + Action Button */}
+            {/* Row 2: Metadata (Platform, Org, Time) + Modern Action Pill */}
             <div className="mobile-mc-bottom">
               <div className="mobile-mc-meta truncate">
                 <span className="platform-tag">{PLATFORM_LABEL[m.platform ?? "meet"]}</span>
                 {orgName?.get(m.org_id) && <span className="truncate">· {orgName.get(m.org_id)}</span>}
-                <span>· {dateTime(m.created_at)}</span>
+                <span className="num">· {dateTime(m.created_at)}</span>
               </div>
               <Link
                 href={`/meetings/${m.id}`}
-                className={`btn sm ${isLive(m) ? "primary" : ""}`}
+                className={`btn-open-mobile ${isLive(m) ? "primary" : ""}`}
                 style={{ flexShrink: 0 }}
               >
-                {isLive(m) ? "Vào phòng" : "Mở"}
+                {isLive(m) ? "Vào ngay 🔴" : "Mở ›"}
               </Link>
             </div>
           </div>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CreateDialog } from "@/components/dialogs";
 import { Dialog } from "@/components/Dialog";
-import { avatarClass, IconCaption, IconDoc, IconPlus, IconUsers, IconVideo, initials } from "@/components/Icons";
+import { avatarClass, IconCaption, IconDoc, IconPlus, IconSearch, IconUsers, IconVideo, initials } from "@/components/Icons";
 import { InviteBox } from "@/components/InviteBox";
 import { isLive, MeetingTable } from "@/components/MeetingTable";
 import { Shell } from "@/components/Shell";
@@ -181,13 +181,33 @@ function OrgView({ id }: { id: string }) {
 
           {tab === "members" && (
             <div className="col" style={{ gap: 18, marginTop: 18 }}>
-              <section className="card">
-                <div className="panel-head">
-                  <input className="input" style={{ maxWidth: 320, height: 34 }} placeholder="Tìm theo tên hoặc email" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Tìm thành viên" />
-                  <div className="grow" />
-                  <span className="muted small">{org.members.length} thành viên</span>
-                  {manage && <button className="btn primary sm" onClick={() => setDialog("invite")}><IconUsers />Mời thành viên</button>}
+              <section className="card" style={{ padding: 0, overflow: "hidden" }}>
+                <div className="table-toolbar" style={{ padding: "12px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", justifyContent: "space-between" }}>
+                    <div className="search-input-wrap" style={{ flex: 1, maxWidth: 320 }}>
+                      <span className="search-input-icon">
+                        <IconSearch size={14} />
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="Tìm theo tên hoặc email…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        aria-label="Tìm thành viên"
+                      />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                      <span className="count" title="Tổng số thành viên">{org.members.length}</span>
+                      {manage && (
+                        <button className="btn primary sm" onClick={() => setDialog("invite")}>
+                          <IconUsers size={15} />
+                          <span>Mời</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
+
                 {org.members
                   .filter((m) => !search.trim() || `${m.name} ${m.email}`.toLowerCase().includes(search.trim().toLowerCase()))
                   .map((m) => {
@@ -195,51 +215,85 @@ function OrgView({ id }: { id: string }) {
                     const canRemove = self || (manage && (isOwner || m.role === "member"));
                     return (
                       <div className="member-row" key={m.user_id}>
-                        <span className={`avatar ${avatarClass(m.name)}`}>{initials(m.name)}</span>
-                        <div className="grow">
-                          <div className="truncate" style={{ fontWeight: 700 }}>{m.name}{self && <span className="muted"> (bạn)</span>}</div>
-                          <div className="muted small truncate">{m.email}</div>
+                        <div className="member-row-profile">
+                          <span className={`avatar ${avatarClass(m.name)}`} style={{ flexShrink: 0 }}>
+                            {initials(m.name)}
+                          </span>
+                          <div className="grow truncate">
+                            <div className="member-name truncate">
+                              <b>{m.name}</b>
+                              {self && <span className="muted small"> (bạn)</span>}
+                            </div>
+                            <div className="muted small truncate">{m.email}</div>
+                          </div>
                         </div>
-                        {isOwner ? (
-                          <select className="select" value={m.role} aria-label={`Vai trò của ${m.name}`} onChange={(e) => act(() => api.setOrgRole(org.id, m.user_id, e.target.value))}>
-                            {(Object.keys(ROLE_LABEL) as OrgRole[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-                          </select>
-                        ) : (
-                          <span className={`tag ${m.role !== "member" ? "accent" : ""}`}>{ROLE_LABEL[m.role]}</span>
-                        )}
-                        {canRemove && (
-                          <button
-                            className="btn sm ghost danger"
-                            onClick={() => {
-                              if (!window.confirm(self ? `Rời tổ chức "${org.name}"?` : `Xóa ${m.name} khỏi tổ chức?`)) return;
-                              act(async () => {
-                                await api.removeOrgMember(org.id, m.user_id);
-                                if (self) router.push("/");
-                              });
-                            }}
-                          >
-                            {self ? "Rời" : "Xóa"}
-                          </button>
-                        )}
+
+                        <div className="member-row-actions">
+                          {isOwner ? (
+                            <select
+                              className="select sm member-role-select"
+                              value={m.role}
+                              aria-label={`Vai trò của ${m.name}`}
+                              onChange={(e) => act(() => api.setOrgRole(org.id, m.user_id, e.target.value))}
+                            >
+                              {(Object.keys(ROLE_LABEL) as OrgRole[]).map((r) => (
+                                <option key={r} value={r}>
+                                  {ROLE_LABEL[r]}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className={`tag ${m.role !== "member" ? "accent" : ""}`}>{ROLE_LABEL[m.role]}</span>
+                          )}
+                          {canRemove && (
+                            <button
+                              className="btn sm ghost danger"
+                              style={{ height: 32, padding: "0 12px", fontSize: 12.5 }}
+                              onClick={() => {
+                                if (!window.confirm(self ? `Rời tổ chức "${org.name}"?` : `Xóa ${m.name} khỏi tổ chức?`)) return;
+                                act(async () => {
+                                  await api.removeOrgMember(org.id, m.user_id);
+                                  if (self) router.push("/");
+                                });
+                              }}
+                            >
+                              {self ? "Rời" : "Xóa"}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
               </section>
 
               {manage && (
-                <section className="card">
-                  <div className="panel-head"><h2 className="grow">Lời mời đang chờ</h2><span className="count">{org.pending.length}</span></div>
-                  {org.pending.length === 0 && <div className="muted small" style={{ padding: 16 }}>Không có lời mời nào đang chờ. Người được mời vào tổ chức khi đăng nhập lần đầu bằng đúng email đó.</div>}
-                  {org.pending.map((p) => (
-                    <div className="pending-row" key={p.id}>
-                      <span className="avatar av-4">{initials(p.email)}</span>
-                      <div className="grow">
-                        <div className="truncate" style={{ fontWeight: 650 }}>{p.email}</div>
-                        <div className="muted small">{ROLE_LABEL[p.role]} · mời lúc {dateTime(p.created_at)}</div>
+                <section className="card" style={{ padding: 0, overflow: "hidden" }}>
+                  <div className="panel-head" style={{ borderBottom: "1px solid var(--line)", padding: "14px 18px" }}>
+                    <h2 className="grow" style={{ fontSize: 15.5 }}>Lời mời đang chờ</h2>
+                    <span className="count">{org.pending.length}</span>
+                  </div>
+                  {org.pending.length === 0 ? (
+                    <div style={{ padding: "32px 20px", textAlign: "center", color: "var(--muted)" }}>
+                      <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 24, opacity: 0.6 }}>✉️</span>
+                        <strong style={{ fontSize: 14 }}>Không có lời mời nào đang chờ</strong>
+                        <span className="small muted" style={{ maxWidth: 360 }}>
+                          Người được mời sẽ tự động tham gia tổ chức khi đăng nhập bằng đúng địa chỉ email đã mời.
+                        </span>
                       </div>
-                      <button className="btn sm ghost danger" onClick={() => act(() => api.revokeOrgInvite(org.id, p.id))}>Thu hồi</button>
                     </div>
-                  ))}
+                  ) : (
+                    org.pending.map((p) => (
+                      <div className="pending-row" key={p.id}>
+                        <span className="avatar av-4">{initials(p.email)}</span>
+                        <div className="grow">
+                          <div className="truncate" style={{ fontWeight: 650 }}>{p.email}</div>
+                          <div className="muted small">{ROLE_LABEL[p.role]} · mời lúc {dateTime(p.created_at)}</div>
+                        </div>
+                        <button className="btn sm ghost danger" onClick={() => act(() => api.revokeOrgInvite(org.id, p.id))}>Thu hồi</button>
+                      </div>
+                    ))
+                  )}
                 </section>
               )}
             </div>

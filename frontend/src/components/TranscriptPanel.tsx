@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { clock } from "@/lib/format";
-import { avatarClass, Equalizer, IconCaption, initials } from "./Icons";
+import { avatarClass, Equalizer, IconCaption, IconTranslate, initials } from "./Icons";
 import type { Language, MeetingStatus, Segment } from "@/lib/types";
 
 interface Props {
@@ -106,16 +106,25 @@ export function TranscriptPanel({ segments, translations, lang, languages, statu
               <span className="truncate"><b>{speaking.join(", ")}</b> đang nói</span>
             </>
           ) : (
-            <span className="muted truncate">{live ? "Chưa ai đang nói" : roster.length ? `${roster.length} người đã phát biểu` : ""}</span>
+            <span className="muted truncate">{live ? "Chưa ai đang nói" : roster.length ? `${roster.length} người phát biểu` : ""}</span>
           )}
         </div>
-        <label htmlFor="lang" className="muted small">Dịch sang</label>
-        <select id="lang" className="select" value={lang ?? ""} onChange={(e) => onLang(e.target.value || null)} aria-label="Ngôn ngữ hiển thị">
-          <option value="">Ngôn ngữ gốc</option>
-          {languages.map((l) => (
-            <option key={l.code} value={l.code}>{l.label}</option>
-          ))}
-        </select>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <IconTranslate size={14} className="muted" />
+          <select
+            id="lang"
+            className="select"
+            value={lang ?? ""}
+            onChange={(e) => onLang(e.target.value || null)}
+            aria-label="Ngôn ngữ hiển thị"
+            style={{ height: 32, fontSize: 12.5, minWidth: 90, padding: "0 10px" }}
+          >
+            <option value="">Bản gốc</option>
+            {languages.map((l) => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
       <div className="transcript" ref={scroller} onScroll={onScroll} aria-live="polite">
         {segments.length === 0 ? (

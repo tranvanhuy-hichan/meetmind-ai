@@ -7,7 +7,7 @@ import { DocumentPane } from "@/components/DocumentPane";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
 import { ZoomEmbed } from "@/components/ZoomEmbed";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
-import { Equalizer, IconBot, IconDoc, IconStop, IconUsers, IconVideo } from "@/components/Icons";
+import { Equalizer, IconBot, IconCaption, IconDoc, IconStop, IconUsers, IconVideo } from "@/components/Icons";
 import { RoomSkeleton } from "@/components/Skeleton";
 import { useMeetingRoom } from "@/hooks/useMeetingRoom";
 import { api, NO_ROOMS } from "@/lib/api";
@@ -27,6 +27,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const room = useMeetingRoom(user ? params.id : "");
   const [languages, setLanguages] = useState<Language[]>([]);
   const [side, setSide] = useState<"transcript" | "people">("transcript");
+  const [mobileTab, setMobileTab] = useState<"transcript" | "stage" | "people">("transcript");
   const [busy, setBusy] = useState(false);
   const [sideW, setSideW] = useState(420);
   const [stageTab, setStageTab] = useState<"zoom" | "docs">("zoom");
@@ -125,7 +126,8 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         <strong className="rh-title truncate">{meeting.title}</strong>
         <span className={`status ${room.status}`}>{STATUS_LABEL[room.status]}</span>
         <span className="muted small row" style={{ gap: 5 }} title="Số người đang mở phiên họp này">
-          <IconUsers />{room.online.size} trực tuyến
+          <IconUsers size={14} />
+          {room.online.size} trực tuyến
         </span>
         {room.speaking.length > 0 && (
           <span className="speaking-chip" title="Đang nói">
@@ -134,25 +136,80 @@ export default function RoomPage({ params }: { params: { id: string } }) {
           </span>
         )}
         <div className="grow" />
-        {meetUrl && (
-          <button className="btn sm on-dark primary" onClick={() => openMeet(meetUrl)} title={`Mở ${platformName} ở cửa sổ riêng. Dùng Win + ←/→ để xếp hai cửa sổ cạnh nhau.`}>
-            <IconVideo />Mở {platformName}
-          </button>
-        )}
-        {manage && canCallBot && (
-          <button className="btn sm on-dark" disabled={busy || !meetUrl} title={meetUrl ? `Cho bot vào phòng ${platformName} để lấy phụ đề` : `Cần nhập link ${platformName} trước`} onClick={() => run(() => api.startMeeting(meeting.id))}>
-            <IconBot />Gọi bot vào họp
-          </button>
-        )}
-        {manage && live && (
-          <button className="btn sm on-dark danger" disabled={busy} onClick={() => window.confirm("Kết thúc cuộc họp và tạo biên bản?") && run(() => api.endMeeting(meeting.id))}>
-            <IconStop />Kết thúc họp
-          </button>
-        )}
-        {showMinutes && (
-          <Link className="btn sm on-dark" href={`/meetings/${meeting.id}/minutes`}><IconDoc />Biên bản</Link>
-        )}
+        <div className="room-nav-actions">
+          {meetUrl && (
+            <button
+              className="btn sm on-dark primary"
+              onClick={() => openMeet(meetUrl)}
+              title={`Mở ${platformName} ở cửa sổ riêng.`}
+            >
+              <IconVideo size={14} /> Mở {platformName}
+            </button>
+          )}
+          {showMinutes && (
+            <Link className="btn sm on-dark" href={`/meetings/${meeting.id}/minutes`}>
+              <IconDoc size={14} /> Biên bản
+            </Link>
+          )}
+          {manage && canCallBot && (
+            <button
+              className="btn sm on-dark"
+              disabled={busy || !meetUrl}
+              onClick={() => run(() => api.startMeeting(meeting.id))}
+            >
+              <IconBot size={14} /> Gọi bot
+            </button>
+          )}
+          {manage && live && (
+            <button
+              className="btn sm on-dark danger"
+              disabled={busy}
+              onClick={() =>
+                window.confirm("Kết thúc cuộc họp và tạo biên bản?") && run(() => api.endMeeting(meeting.id))
+              }
+            >
+              <IconStop size={14} /> Kết thúc
+            </button>
+          )}
+        </div>
       </AppBar>
+
+      {/* Mobile Tab Switcher */}
+      <div className="mobile-room-tab-bar" role="tablist">
+        <button
+          role="tab"
+          aria-selected={mobileTab === "transcript"}
+          className={`mobile-rtab ${mobileTab === "transcript" ? "active" : ""}`}
+          onClick={() => {
+            setMobileTab("transcript");
+            setSide("transcript");
+          }}
+        >
+          <IconCaption size={15} />
+          <span>Phụ đề</span>
+        </button>
+        <button
+          role="tab"
+          aria-selected={mobileTab === "stage"}
+          className={`mobile-rtab ${mobileTab === "stage" ? "active" : ""}`}
+          onClick={() => setMobileTab("stage")}
+        >
+          <IconDoc size={15} />
+          <span>Tài liệu {room.documents.length > 0 ? `(${room.documents.length})` : ""}</span>
+        </button>
+        <button
+          role="tab"
+          aria-selected={mobileTab === "people"}
+          className={`mobile-rtab ${mobileTab === "people" ? "active" : ""}`}
+          onClick={() => {
+            setMobileTab("people");
+            setSide("people");
+          }}
+        >
+          <IconUsers size={15} />
+          <span>Thành viên ({room.participants.length})</span>
+        </button>
+      </div>
 
       <div>
         {!room.connected && <div className="notice warn">Mất kết nối với máy chủ, đang thử kết nối lại…</div>}
@@ -160,31 +217,47 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         {roomNote && (
           <div className={`notice ${roomNote.ok ? "" : "warn"} row`}>
             <span className="grow">{roomNote.text}</span>
-            <button className="btn sm ghost" onClick={() => setRoomNote(null)}>Đóng</button>
+            <button className="btn sm ghost" onClick={() => setRoomNote(null)}>
+              Đóng
+            </button>
           </div>
         )}
         {actionError && (
           <div className="notice warn row">
             <span className="grow error">{actionError}</span>
-            <button className="btn sm ghost" onClick={() => setActionError("")}>Đóng</button>
+            <button className="btn sm ghost" onClick={() => setActionError("")}>
+              Đóng
+            </button>
           </div>
         )}
         {room.notice && (
           <div className="notice warn row">
             <span className="grow">{room.notice}</span>
-            <button className="btn sm ghost" onClick={room.clearNotice}>Đóng</button>
+            <button className="btn sm ghost" onClick={room.clearNotice}>
+              Đóng
+            </button>
           </div>
         )}
       </div>
 
       <div className="room-body" style={{ "--side-w": `${sideW}px` } as React.CSSProperties}>
-        <div className="stage">
+        <div className={`stage ${mobileTab !== "stage" ? "mobile-room-pane-hide" : ""}`}>
           {hasZoom && (
             <div className="tabs stage-tabs" role="tablist">
-              <button role="tab" aria-selected={stageTab === "zoom"} className={`tab ${stageTab === "zoom" ? "active" : ""}`} onClick={() => setStageTab("zoom")}>
+              <button
+                role="tab"
+                aria-selected={stageTab === "zoom"}
+                className={`tab ${stageTab === "zoom" ? "active" : ""}`}
+                onClick={() => setStageTab("zoom")}
+              >
                 Zoom
               </button>
-              <button role="tab" aria-selected={stageTab === "docs"} className={`tab ${stageTab === "docs" ? "active" : ""}`} onClick={() => setStageTab("docs")}>
+              <button
+                role="tab"
+                aria-selected={stageTab === "docs"}
+                className={`tab ${stageTab === "docs" ? "active" : ""}`}
+                onClick={() => setStageTab("docs")}
+              >
                 Tài liệu{room.documents.length > 0 ? ` (${room.documents.length})` : ""}
               </button>
             </div>
@@ -196,32 +269,58 @@ export default function RoomPage({ params }: { params: { id: string } }) {
             </section>
           )}
           <div className="stage-docs" hidden={hasZoom && stageTab !== "docs"}>
-        <DocumentPane
-          meetingId={meeting.id}
-          meId={me.user_id}
-          canManage={manage}
-          documents={room.documents}
-          participants={room.participants}
-          presenter={room.presenter}
-          position={room.position}
-          requests={room.requests}
-          onClaim={room.claim}
-          onRelease={room.release}
-          onGrant={room.grant}
-          onMove={room.move}
-          onDismissRequest={room.dismissRequest}
-        />
+            <DocumentPane
+              meetingId={meeting.id}
+              meId={me.user_id}
+              canManage={manage}
+              documents={room.documents}
+              participants={room.participants}
+              presenter={room.presenter}
+              position={room.position}
+              requests={room.requests}
+              onClaim={room.claim}
+              onRelease={room.release}
+              onGrant={room.grant}
+              onMove={room.move}
+              onDismissRequest={room.dismissRequest}
+            />
           </div>
         </div>
 
-        <div className="splitter" role="separator" aria-orientation="vertical" aria-label="Kéo để đổi kích thước" title="Kéo để đổi kích thước" onPointerDown={startResize} onDoubleClick={() => { setSideW(420); try { localStorage.removeItem("meetmind.sideW"); } catch {} }} />
+        <div
+          className="splitter"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Kéo để đổi kích thước"
+          title="Kéo để đổi kích thước"
+          onPointerDown={startResize}
+          onDoubleClick={() => {
+            setSideW(420);
+            try {
+              localStorage.removeItem("meetmind.sideW");
+            } catch {}
+          }}
+        />
 
-        <section className="side-pane" aria-label="Phụ đề và người tham gia">
-          <div className="tabs" role="tablist">
-            <button role="tab" aria-selected={side === "transcript"} className={`tab ${side === "transcript" ? "active" : ""}`} onClick={() => setSide("transcript")}>
+        <section
+          className={`side-pane ${mobileTab === "stage" ? "mobile-room-pane-hide" : ""}`}
+          aria-label="Phụ đề và người tham gia"
+        >
+          <div className="tabs desktop-side-tabs" role="tablist">
+            <button
+              role="tab"
+              aria-selected={side === "transcript"}
+              className={`tab ${side === "transcript" ? "active" : ""}`}
+              onClick={() => setSide("transcript")}
+            >
               Phụ đề
             </button>
-            <button role="tab" aria-selected={side === "people"} className={`tab ${side === "people" ? "active" : ""}`} onClick={() => setSide("people")}>
+            <button
+              role="tab"
+              aria-selected={side === "people"}
+              className={`tab ${side === "people" ? "active" : ""}`}
+              onClick={() => setSide("people")}
+            >
               Người tham gia ({room.participants.length})
             </button>
           </div>
